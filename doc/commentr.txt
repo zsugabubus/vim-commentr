@@ -1,0 +1,254 @@
+*commentr.txt*	For Vim version 7.3
+
+                                      Type |gO| to see the table of contents.
+
+==============================================================================
+INTRO							*commentr-intro*
+
+A powerful commenter plugin.
+
+==============================================================================
+COMMANDS						*commentr-commands*
+
+:[range]Comment	[group]						*:Comment*
+			Comment a range of text.
+			Range is automagically derived from current mode.
+
+			|mode()|	range
+			n		The given [range]. Note that if no
+					explicit range is given Vim uses '.'
+					as default, i.e.  the line the under
+					cursor.
+
+			no		The motion. (Don't use it directly.)
+
+			v, V, CTRL-V
+			s, S, CTRL-S	Selected range from '[ to '].
+
+			i		A zero-length range at the position of
+					the cursor
+
+			Calling in every other mode is an error.
+
+			For [group] see |commentr-comment-template|.
+
+==============================================================================
+CONFIGURATION					*commentr-configuration*
+
+------------------------------------------------------------------------------
+Comment margin						*commentr_margin*
+							*g:commentr_margin*
+							*b:commentr_margin*
+
+Margin around comments. It can be a {Number} or a {Dictionary} that specifies
+margin to being used per "group".
+
+------------------------------------------------------------------------------
+Comment padding						*commentr_padding*
+							*g:commentr_padding*
+							*b:commentr_padding*
+
+Padding inside comments. It can be a {Number} or a {Dictionary} that specifies
+padding to being used per "group".
+
+Examples: >
+         let g:commentr_margin = { '': 1, 'd': 0, 'default': 5 }
+<
+
+------------------------------------------------------------------------------
+Comment alignment					*commentr_align*
+							*g:commentr_align*
+							*b:commentr_align*
+
+Specifies how to align left and right parts of the comment string in a line.
+It's a {String} in the format of "{left}{right}" where {left} and {right} is a
+specifier from |commentr_align-left| and |commentr_align-right| respectively.
+Default is "|$".
+
+Note that <Tab> charaters will be split into spaces where necessary.
+
+	{left}	meaning					*commentr_align-left*
+	0	Place left part of comment to the first column.
+>
+		 1|>   struct foobar {
+		 2|>    field1,
+		 3|>      field1,
+		 4|>   }
+<	
+	_	Place left part of comment before the first non-white
+		character.
+>
+		 1|   >struct foobar {
+		 2|    >field1,
+		 3|      >field1,
+		 4|   >}
+<	
+	|	Place left part of comment to one column and as right as
+		possible.
+>
+		 1|   >struct foobar {
+		 2|   > field1,
+		 3|   >   field1,
+		 4|   >}
+<	
+	{right}	meaning					*commentr_align-right*
+	$	Append right part of comment to the line.
+>
+		(assume trailing whites)
+	
+		 1|   struct foobar {    <
+		 2|    field1,  <
+		 3|      field1, <
+		 4|   }   <
+<	
+	<	Same as $, but remove trailing whites.
+>
+		 1|   struct foobar {<
+		 2|    field1,<
+		 3|      field1,<
+		 4|   }<
+<	
+	>	Remove trailing whites and stretch line to 'textwidth'
+		character wide by inserting spaces.
+>
+		set &textwidth=15
+
+		   |-------------|
+		  |12345678901234567890
+		 1|   struct foobar {<
+		 2|    field1,   <
+		 3|      field1, <
+		 4|   }          <
+<	
+	|	Remove trailing whites and place right part of comment to one
+		column and as left as possible. Note that lines may be longer
+		than 'textwidth'.
+>
+		 1|   struct foobar {<
+		 2|    field1,       <
+		 3|      field1,     <
+		 4|   }              <
+<	
+--------------------------------------------------------------------------------
+Builtin mappings					*commentr_no_mappings*
+							*g:commentr_no_mappings*
+
+1 to disable builtin mappings, otherwise enable. See |commentr_map_leader| and
+|commentr_map_groups| if you want to customize builtin mappings, or |:Comment|
+if you want specify your own mappings.
+
+Specifying your own mapping is as easy as: >
+    map <silent> {binding} <Cmd>Comment<CR>
+    map <silent> <expr> {binding} commentr#CommentMotion('{group}')
+<
+Example: >
+        nmap <silenc> <expr> gc; commentr#CommentMotion('') . 'f;'
+<        Comment out everything until the next ";". >
+
+List of builtin mappings			*commentr-builtin-mappings*
+
+If |commentr_no_mappings| is not enabled the following mappings will be used.
+
+Note: <group> is the assigned keybinding of "group", specified by
+|commentr_map_group| .
+
+Note: <xLeader> is the assigned keybinding of mode "x", specified by
+|commentr_map_leader| .
+
+Normal mode mappings:
+
+<nLeader><group>{motion}	Comment out text moved over by {motion}.
+<nLeader><group>c		Comment out current line. It can be treated as
+				a shortcut to "_<nLeader>$" but uses internal
+				alignment specifiers from |commentr_align|
+				instead of jumping with "_" and "$" to
+				position parts of the comment.
+<nLeader><group>A		Jump with |A| and insert comment, i.e. append
+				comment.
+<nLeader><group>I		Jump with |I| and insert comment, i.e. prepend
+				comment.
+<nLeader><group>o		Jump with |o| and insert comment, i.e. insert
+				comment below.
+<nLeader><group>O		Jump with |O| and insert comment, i.e. insert
+				comment above.
+
+Visual mode mappings:
+<vLeader><group>c		Comment out selected area.
+
+Insert mode mappings:
+<iLeader><group>i		Insert comment at the place of the cursor.
+
+--------------------------------------------------------------------------------
+Leader key bindings					*commentr_map_leader*
+							*g:commentr_map_leader*
+
+If |commentr_no_mappings| is disabled, specifies leader keys per mode, i.e.
+the root of the subsequent bindings. |commentr| provides builtin mappings for
+the following modes:
+
+	key     mode
+	n	|Normal-mode|
+	v	|Visual-mode| (affects |Select-mode| also)
+	i	|Insert-mode|
+
+See |commentr-builtin-mappings| for builtin mappings.
+
+Examples: >
+         { 'nvi': '<C-\>' }
+         { 'vn': '<C-\>', 'i': '<C-\>c' }
+         { 'n': '<C-\>',  'v': '<C-\>', 'i': '<C-\>c' }
+<         Use same leader for multiple modes by grouping keys. Note that order
+         doesn't count. >
+         '<C-\>'
+<         Use one leader for all modes. >
+         { 'n': '<Leader>c' }
+<         Disable mappings by omitting keys. In this case just normal mode
+         mappings will be used.
+
+
+See |commentr-builtin-mappings| for builtin mappings.
+
+==============================================================================
+Comment group bindings					*commentr_map_group*
+							*g:commentr_map_group*
+
+Used internally for mapping a specific comment group to a binding. It's a
+{Dictionary} that contains item in the format of "group": "binding". See
+|commentr-comment-template| to find out more about "group". "binding" can be
+any {String} that specifies commenting with a comment from that group.
+
+Examples: >
+         { '': '', 'm': 'm', 'd': 'DDD' }
+<         Empty string means the default group. In this example it will be
+         translated to "", so you can comment out the current line (with a
+         comment from the default, "" group) with "<nLeader>cc". Inserting an
+         "m" comment above happens with "<nLeader>cmO"... etc. Moreover a
+         binding can be any {String}, as stated above, so for example appending
+         a "d" comment: "<nLeader>cDDDA". See |commentr-builtin-mappings| for
+         more. >
+         { '': '', 't': 'a' }
+<         In normal mode "" comments will be attached under "<nLeader>" and "t"
+         comments will be attached under "<nLeader>a". However in this case you
+         have to keep in mind that "<nLeader>{motion}" and "<nLeader>a..."
+         mappings are colliding with each other, so please pay attention and
+         avoid situations like this.
+
+==============================================================================
+Comment template				*commentr-comment-template*
+						*b:commentr_cache.commentstring*
+
+It's just like 'commentstring' with some added features.
+
+Sorry, for the poor documentation, see "autoload/commentr.vim" for examples.
+
+==============================================================================
+CONTRIBUTIONS					*commentr-contributions*
+
+Contributions and pull requests are welcome.
+
+==============================================================================
+LICENSE							*commentr-license*
+
+Released under the GNU General Public License version v3.0 or later.
+
+ vim:noet:tw=78:ts=8:ft=help:norl:nowrap
