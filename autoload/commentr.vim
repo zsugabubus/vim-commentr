@@ -901,7 +901,8 @@ function! g:commentr#DoComment(...) abort range
       if lstr[0] ==# ' '
         let lstr = lstr[!(lline[-1:] =~# '\S'):]
       endif
-      if lstr[-1:] ==# ' '
+      " whitespaces are required in insert mode
+      if lstr[-1:] ==# ' ' && mode !=# 'i'
         let lstr = lstr[:-1 - !(mline[0] =~# '\S')]
       endif
 
