@@ -492,7 +492,7 @@ function s:parse_commentstring() abort
     let comment.group = last_group
     let comment.nestable = nestable
 
-    if lcom =~# '^\\[0_|]' 
+    if lcom =~# '^\\[0_|]'
       let comment.lstr = lcom[2:]
       let comment.left_sel = lcom[1]
     else
@@ -509,7 +509,7 @@ function s:parse_commentstring() abort
 
     let comment.lstr = white_lmargin . comment.lstr . white_lpad
 
-    if rcom =~# '\\[$_|]$' 
+    if rcom =~# '\\[$_|]$'
       let comment.rstr = rcom[:-3]
       let comment.right_sel = rcom[-1]
     else
@@ -731,12 +731,12 @@ function! g:commentr#DoComment(...) abort range
       let [lwhite, zero, end_lwhite] = matchstrpos(line, '^\s\+')
       let dlen_lwhite = strdisplaywidth(lwhite)
 
-      if can_lalign 
+      if can_lalign
         " just white before comment start
         let can_lalign = com_start <=# end_lwhite + 1
       endif
 
-      if dlen_lwhite <# min_dlen_lwhite 
+      if dlen_lwhite <# min_dlen_lwhite
         let min_dlen_lwhite = dlen_lwhite
         let min_lwhite = lwhite
       endif
@@ -884,7 +884,7 @@ function! g:commentr#DoComment(...) abort range
           endwhile
 
           "echom lnum . ': ' . min_dlen_lwhite . ', ' . n
-          "FIXME: 
+          "FIXME:
           if min_dlen_lwhite ==# n
             let lline = strpart(mline, 0, i)
             let mline = mline[i:]

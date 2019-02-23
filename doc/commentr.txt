@@ -74,7 +74,7 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 2|>    field1,
 		 3|>      field1,
 		 4|>   }
-<	
+
 	_	Place left part of comment before the first non-white
 		character.
 >
@@ -82,7 +82,7 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 2|    >field1,
 		 3|      >field1,
 		 4|   >}
-<	
+<
 	|	Place left part of comment to one column and as right as
 		possible.
 >
@@ -90,24 +90,24 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 2|   > field1,
 		 3|   >   field1,
 		 4|   >}
-<	
+<
 	{right}	meaning					*commentr_align-right*
 	$	Append right part of comment to the line.
 >
 		(assume trailing whites)
-	
+
 		 1|   struct foobar {    <
 		 2|    field1,  <
 		 3|      field1, <
 		 4|   }   <
-<	
+<
 	<	Same as $, but remove trailing whites.
 >
 		 1|   struct foobar {<
 		 2|    field1,<
 		 3|      field1,<
 		 4|   }<
-<	
+<
 	>	Remove trailing whites and stretch line to 'textwidth'
 		character wide by inserting spaces.
 >
@@ -119,7 +119,7 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 2|    field1,   <
 		 3|      field1, <
 		 4|   }          <
-<	
+<
 	|	Remove trailing whites and place right part of comment to one
 		column and as left as possible. Note that lines may be longer
 		than 'textwidth'.
@@ -128,7 +128,7 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 2|    field1,       <
 		 3|      field1,     <
 		 4|   }              <
-<	
+<
 --------------------------------------------------------------------------------
 Builtin mappings					*commentr_no_mappings*
 							*g:commentr_no_mappings*
