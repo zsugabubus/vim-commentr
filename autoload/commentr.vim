@@ -414,6 +414,7 @@ function! s:compute_range(mode) abort
     let [end_lnum,   end_col]   = getpos("']")[1:2]
 
     if a:mode ==# 'line'
+      let start_col = 1
       let end_col = 2147483647
     endif
 
