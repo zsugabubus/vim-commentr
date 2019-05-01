@@ -28,7 +28,7 @@ let s:ft2com = [
       \ slang slrnrc tex texmf txt2tags virata ',
 \     '%%s'
 \   ],
-\   [ ' acedb actionscript asy c cg ch clean clipper cpp cs cuda d dot
+\   [ ' acedb actionscript asy cg ch clean clipper cpp cs cuda d dot
       \ dylan fx glsl go groovy h haxe hercules hyphy idl ishd java
       \ javacc javascript javascript.jquery kscript lpc mel named objc
       \ objcpp objj ooc pccts php pike pilrc plm pov processing rc sass
@@ -89,6 +89,9 @@ let s:ft2com = [
 \   ],
 \   [ ' btm ',
 \     '::%s'
+\   ],
+\   [ ' c ',
+\     '/*%s*/,\@d/**%s*/'
 \   ],
 \   [ ' caos cterm form foxpro gams sicad snobol4 ',
 \     '*%s'
