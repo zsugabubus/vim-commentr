@@ -912,7 +912,7 @@ function! g:commentr#DoComment(...) abort range
 
       let mline = lstr . mline
       if !exists('cur_first_pos')
-        let cur_first_pos = [lnum, strdisplaywidth(lline . lstr) + 1]
+        let cur_first_pos = [lnum, len(lline) + len(lstr) + 1]
       endif
     endif
 
@@ -935,7 +935,7 @@ function! g:commentr#DoComment(...) abort range
       endif
 
       if !exists('cur_last_pos')
-        let cur_last_pos = [lnum, strdisplaywidth(lline . mline) + (&selection ==# 'exclusive')]
+        let cur_last_pos = [lnum, len(lline) + len(mline) + (&selection ==# 'exclusive')]
       endif
 
       if rline ==# ''
