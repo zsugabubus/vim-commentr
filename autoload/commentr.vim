@@ -1,11 +1,12 @@
 " LICENSE: GPLv3 or later
+" AUTHOR: zsugabubus
 
 " SECTION: Init-Boilerplate {{{1
 let s:save_cpo = &cpo
 set cpo&vim
 
 " SECTION: Variables {{{1
-let s:html_comment = '<!--%s-->,,& &amp;,,-- &#45;&#45;'
+let s:html_comment = '<!--%s-->,,x/&/&amp;/x/--/&#45;&#45;/'
 let s:ft2com = [
 \   [ ' aap ampl ansible apache apachestyle awk bash bc cfg cl cmake
       \ conkyrc crontab cucumber cython dakota debcontrol debsources
@@ -34,7 +35,7 @@ let s:ft2com = [
       \ objcpp objj ooc pccts php pike pilrc plm pov processing rc sass
       \ scss slice stan stp supercollider swift systemverilog tads teak
       \ tsalt typescript uc vala vera verilog verilog_systemverilog ',
-\     '//%s,/*%s*/,\@d///%s,/**%s*/',
+\     '//%s,/*%s*/,\=d///%s,/**%s*/',
 \   ],
 \   [ ' ada ahdl asn cabal csp eiffel gdmo hive lace mib occam sa sather
       \ sql sqlforms sqlj vhdl ',
@@ -91,7 +92,7 @@ let s:ft2com = [
 \     '::%s'
 \   ],
 \   [ ' c ',
-\     '/*%s*/,\@d/**%s*/'
+\     '/*%s*/,,x:/*:\*:x:*/:*\:,\=d/**%s*/'
 \   ],
 \   [ ' caos cterm form foxpro gams sicad snobol4 ',
 \     '*%s'
@@ -100,7 +101,7 @@ let s:ft2com = [
 \     '--%s--'
 \   ],
 \   [ ' cf ',
-\     '\<!---%s--->'
+\     '<!---%s--->'
 \   ],
 \   [ ' coffee ',
 \     '#%s,###%s###'
@@ -187,7 +188,7 @@ let s:ft2com = [
 \     '/*%s*/'
 \   ],
 \   [ ' lhaskell ',
-\     '\>-- %s,>{-%s-}'
+\     '>-- %s,>{-%s-}'
 \   ],
 \   [ ' liquid ',
 \     '{% comment %}%s{% endcomment %}'
@@ -253,10 +254,10 @@ let s:ft2com = [
 \     '//-%s,//%s'
 \   ],
 \   [ ' rust ',
-\     '//%s,\>/*%s*/,\@d///%s,\>/**%s*/,\@m//!%s,\>/*!%s*/'
+\     '//%s,/*%s*/,\=d///%s,/**%s*/,\=m//!%s,/*!%s*/'
 \   ],
 \   [ ' scala ',
-\     '//%s,/*%s*/,\@d///%s,/**%s*/'
+\     '//%s,/*%s*/,\=d///%s,/**%s*/'
 \   ],
 \   [ ' simula ',
 \     '%%s,--%s'
@@ -295,7 +296,7 @@ let s:ft2com = [
 \     '##%s,#*%s*#'
 \   ],
 \   [ ' vim ',
-\     ' "%s,," \\"'
+\     ' "%s,,x:":\":'
 \   ],
 \   [ ' xquery ',
 \     '(:%s:)'
@@ -304,22 +305,24 @@ let s:ft2com = [
 
 unlet s:html_comment
 
+let s:sskip = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'
+
 " SECTION: Functions {{{1
 " SECTION: Local functions {{{2
-function! s:getOption(opt_name, ...)
+function! s:getOption(opt_name, ...) abort
   " {{{3
   let var_name = ':commentr_' . a:opt_name
 
   if exists('g' . var_name)
     let var = g{var_name}
-    let global_var = type(var) ==# v:t_dict ? var : {'default': var}
+    let global_var = type(var) ==# v:t_dict ? var : { 'default': var }
   else
     let global_var = {}
   end
 
   if exists('b' . var_name)
     let var = b{var_name}
-    let buffer_var = type(var) ==# v:t_dict ? var : {'default': var}
+    let buffer_var = type(var) ==# v:t_dict ? var : { 'default': var }
   else
     let buffer_var = {}
   end
@@ -354,67 +357,137 @@ function! s:getOption(opt_name, ...)
   return var['default']
 endfunction " 3}}}
 
-function! s:loadFileType(...)
+function! s:searchpos(pattern, stopline) abort
   " {{{3
+  let flags = 'cWz'
+  while 1
+    let pos = searchpos(a:pattern, flags, a:stopline)
+    if pos ==# [0, 0] || !eval(s:sskip)
+      return pos
+    endif
+    " Start searching from one column right.
+    let flags = 'Wz'
+  endwhile
+endfunction " 3}}}
 
-  let ft = get(a:, 1, &ft)
-  if !exists('b:commentr_cache')
-    let b:commentr_cache = {}
-  elseif exists('b:commentr_cache.' . ft)
-    let cache = b:commentr_cache[ft]
-    let b:commentstring = cache.commentstring
-    let b:comments      = cache.comments
-    return
+" Purpose: Checks whether position `before` and `after` are in order.
+function! s:posbefore(before, after) abort
+  " {{{3
+  return (a:before[0] !=# a:after[0]
+        \  ? a:before[0] <# a:after[0]
+        \  : a:before[1] <# a:after[1])
+endfunction " 3}}}
+
+" Purpose: Checks if given position is commented.
+function! s:isCommentedAt(lnum, col) abort
+  return synIDattr(synIDtrans(synID(a:lnum, a:col, 1)), "name") =~? 'comment'
+endfunction
+
+" Purpose: Guess filetype under cursor.
+function! s:guessFiletypes() abort
+  " {{{3
+  let ftstack = []
+  let noguess = get(g:commentr_ft_noguess, &ft, [])
+  if type(noguess) ==# v:t_list || noguess !=# '*'
+    let synstack = reverse(synstack(line('.'), col('.')))
+
+    for synitem in synstack
+      let synft = s:getFiletypeFromSyn(synitem)
+      if empty(synft) || get(ftstack, 0, '') ==# synft
+        continue
+      endif
+
+      if index(noguess, synft) !=# -1
+        continue
+      endif
+
+      call add(ftstack, synft)
+    endfor
   endif
 
-  let spaced_ft = ' ' . ft . ' '
+  " Add fallback to actual filetype.
+  call add(ftstack, &ft)
+  return ftstack
+endfunction " 3}}}
+
+" Purpose: Return info about given filetype.
+function! s:getFiletypeStrings(ft) abort
+  " {{{3
+  let found = 0
+  let spaced_ft = ' ' . a:ft . ' '
   for [langs, com] in s:ft2com
     if stridx(langs, spaced_ft) >=# 0
-      let b:commentstring = com
-
-      if ft !=# &ft
-        let old_ft = &ft
-        set ft=ft
-      endif
-
-      let b:comments = &comments
-      let b:commentr_cache[ft] = {
-      \   'commentstring': b:commentstring,
-      \   'comments':      b:comments
-      \ }
-
-      if exists('old_ft')
-        exe 'set ft=' . old_ft
-      endif
-
-      return
+      let found = 1
+      let commentstring = com
+      break
     endif
   endfor
 
-  let b:commentstring = &commentstring
-  let b:comments = &comments
-  let b:commentr_cache[ft] = {
-  \   'commentstring': b:commentstring,
-  \   'comments':      b:comments
-  \ }
+  " Filetype not in internal cache.
+
+  if a:ft !=# &ft
+    let oldft = &ft
+    exe 'set ft=' . a:ft
+    let found = found || b:did_ftplugin
+  else
+    let found = 1
+  endif
+
+  if !exists('comments')
+    let comments = &comments
+  endif
+  if !exists('commentstring')
+    let commentstring = &commentstring
+  endif
+
+  if exists('oldft')
+    exe 'set ft=' . oldft
+  endif
+
+  return [found, commentstring, comments]
 endfunction " 3}}}
 
-function! s:compute_range(mode) abort
+" Purpose: Fill internal commentstring entries.
+function! s:getCommentstring() abort
+  " {{{3
+  for guessedft in s:guessFiletypes()
+    " If it's in the cache, it surely exists.
+    if exists('b:commentr_cache.' . guessedft)
+      break
+    endif
+
+    let [found, commentstring, comments] = s:getFiletypeStrings(guessedft)
+    if !found
+      continue
+    endif
+
+    if !exists('b:commentr_cache')
+      let b:commentr_cache = {}
+    endif
+
+    let b:commentr_cache[guessedft] = s:parseCommentstring(commentstring, comments)
+    break
+  endfor
+
+  return deepcopy(b:commentr_cache[guessedft])
+endfunction " 3}}}
+
+" Purpose: Return range for (un)commenting.
+function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort
+  " {{{3
   if a:mode ==# 'v' || a:mode ==# 's' || a:mode ==# "\<C-V>" || a:mode ==# "\<C-S>"
-    let [start_lnum, start_col] = getpos('v')[1:2]
-    let [end_lnum,   end_col]   = getpos('.')[1:2]
+    let [start_lnum, start_col] = [line('v'), virtcol('v')]
+    let [end_lnum,   end_col]   = [line('.'), virtcol('.')]
     let range_type = a:mode ==# 'v' || a:mode ==# 's' ? 'char' : 'block'
 
   elseif a:mode ==# 'V' || a:mode ==# 'S'
-    let start_lnum = line('v')
-    let start_col = 0
-    let end_lnum = line('.')
-    let end_col = 2147483647
+    let [start_lnum, start_col] = [line('v'), 1]
+    let [end_lnum, end_col]     = [line('.'), 2147483647]
     let range_type = 'char'
 
   elseif a:mode ==# 'line' || a:mode ==# 'char' || a:mode ==# 'block'
-    let [start_lnum, start_col] = getpos("'[")[1:2]
-    let [end_lnum,   end_col]   = getpos("']")[1:2]
+    let [start_lnum, start_col] = [line("'["), virtcol("'[")]
+    let [end_lnum,   end_col]   = [line("']"), virtcol("']")]
 
     if a:mode ==# 'line'
       let start_col = 1
@@ -424,17 +497,16 @@ function! s:compute_range(mode) abort
     let range_type = a:mode ==# 'block' ? 'block' : 'char'
 
   elseif a:mode ==# 'n'
-    let [start_lnum, start_col] = [a:firstline, 1]
-    let [end_lnum,   end_col]   = [a:lastline,  2147483647]
+    let [start_lnum, start_col] = [a:firstline_, 1]
+    let [end_lnum,   end_col]   = [a:lastline_,  2147483647]
     let range_type = 'block'
 
   elseif a:mode ==# 'i'
-    let [start_lnum, start_col] = getpos('.')[1:2]
-    let end_lnum = start_lnum
-    let end_col  = start_col - 1
+    let [start_lnum, start_col] = [line('.'), virtcol('.')]
+    let [end_lnum, end_col]     = [start_lnum, start_col ># 1 ? start_col - 1 : 1]
     let range_type = 'char'
   else
-    throw 'commentr: unknown mode: ' . a:mode
+    throw 'commentr: Unknown mode: ' . a:mode
   endif
 
   if start_lnum ># end_lnum
@@ -454,113 +526,166 @@ function! s:compute_range(mode) abort
     endif
   endif
 
-  if start_col <# 1
+  if a:force_linewise
     let start_col = 1
+    let end_col = 2147483647
+    let range_type = 'char'
   endif
 
   return [start_lnum, start_col, end_lnum, end_col, range_type]
-endfunction
+endfunction " 3}}}
 
-function s:parse_commentstring() abort
-  let tokens = split(b:commentstring, '\([^,\\]\|\\,\)\zs,\ze[^,]')
-  let opt_comments = split(b:comments, ',')
+" Purpose: Parse commentstring and comments to a commentr consumable
+" format.
+function! s:parseCommentstring(commentstring, comments) abort
+  " {{{3
+  let tokens = split(a:commentstring, '\v([^,\\]|[^\\](\\\\)*\\[,\\])\zs,\ze[^,]')
+  let opt_comments = split(a:comments, '\V,')
 
   let comments = []
-  let last_group = ''
+  let group = ''
   for token in tokens
-    let [com; escs] = split(token, '[^\\]\zs,,')
+    let token = substitute(token, '\v\\([\\,])', '\1', 'g')
 
-    let nestable = 0
-
-    while com[0] ==# '\'
-      let k = com[1]
-      if k ==# '@'
-        let last_group = com[2]
-        let com = com[3:]
-      elseif k ==# '>'
-        let com = com[2:]
-      elseif k ==# '\'
-        let com = com[2:]
-        break
-      else
-        break
-      endif
-    endwhile
-
-    let [lcom, rcom] = split(com, '%s', 1)
-    let comment = {}
-
-    let margin = s:getOption('margin', [last_group])
-    let padding = s:getOption('padding', [last_group])
-
-    let comment.group = last_group
-    let comment.nestable = nestable
-
-    if lcom =~# '^\\[0_|]'
-      let comment.lstr = lcom[2:]
-      let comment.left_sel = lcom[1]
-    else
-      let comment.lstr = lcom
-      let comment.left_sel = '*'
+    let [_, _, grp, lcom, _, rcom, _, escs; _] =
+        \ matchlist(token, '\m^\(\\=\(.\)\)\?\(.\{-}\)\(%s\(.\{-}\)\)\?\(,,\(.*\)\)\?$')
+    if !empty(grp)
+      let group = grp
     endif
 
-    let [start_rwhite, end_rwhite] = matchstrpos(comment.lstr, '\s*$')[1:2]
-    let len_lpad = end_rwhite - start_rwhite
-    let len_lmargin = matchstrpos(comment.lstr, '^\s\+')[2]
+    let comment = {}
 
-    let white_lmargin = repeat(' ', (type(margin) ==# v:t_list ? margin[0] : margin) - len_lmargin)
-    let white_lpad = repeat(' ', (type(padding) ==# v:t_list ? padding[0] : padding) - len_lpad)
+    let margin = s:getOption('margin', [group])
+    let padding = s:getOption('padding', [group])
 
-    let comment.lstr = white_lmargin . comment.lstr . white_lpad
+    let comment.group = group
 
-    if rcom =~# '\\[$_|]$'
+    let lcom = substitute(lcom, '\\,', ',', 'g')
+    if lcom =~# '^\\[0^_]'
+      let comment.lstr = lcom[2:]
+      let comment.lsel = lcom[1]
+      if comment.lsel ==# '_'
+        let comment.lpat = '^\s*'
+      else
+        let comment.lpat = '^'
+      endif
+    else
+      let comment.lstr = lcom
+      let comment.lsel = '*'
+      let comment.lpat = ''
+    endif
+    let comment.lpat = '\C' . comment.lpat . '\V' . substitute(substitute(escape(comment.lstr, '\'), '\m^\s\+', '\\(\\s\\|\\^\\)', ''), '\m\s\+$', '\\(\\s\\|\\$\\)', '')
+
+    let [start_white, end_white] = matchstrpos(comment.lstr, '\m\s*$')[1:2]
+    let len_padding = end_white - start_white
+    let len_margin = matchstrpos(comment.lstr, '\m^\s\+')[2]
+
+    let len_needed_margin = (type(margin) ==# v:t_list ? margin[0] : margin)
+    let len_needed_padding = (type(padding) ==# v:t_list ? padding[0] : padding)
+    let comment.len_lmargin = max([len_needed_margin, len_margin])
+    let comment.len_lpadding = max([len_needed_padding, len_padding])
+
+    let white_margin = repeat(' ', len_needed_margin - len_margin)
+    let white_padding = repeat(' ', len_needed_padding - len_padding)
+
+    let comment.lpurestr = trim(comment.lstr, ' ')
+    let comment.lstr = white_margin . comment.lstr . white_padding
+
+    let rcom = substitute(rcom, '\\,', ',', 'g')
+    if rcom =~# '\\[$_]$'
       let comment.rstr = rcom[:-3]
-      let comment.right_sel = rcom[-1]
+      let comment.rsel = rcom[-1]
     else
       let comment.rstr = rcom
       if comment.rstr ==# ''
         " line comment
-        let comment.right_sel = '$'
+        let comment.rsel = '$'
       else
         " block comment
-        let comment.right_sel = '*'
+        let comment.rsel = '*'
       endif
     endif
+    if comment.rsel ==# '_'
+      let comment.rpat = '\s*$'
+    elseif comment.rsel ==# '$'
+      let comment.rpat = '$'
+    else
+      let comment.rpat = ''
+    endif
+    let comment.rpat =  '\C\V' . substitute(substitute(escape(comment.rstr, '\'), '\m^\s\+', '\\(\\s\\|\\^\\)', ''), '\m\s\+$', '\\(\\s\\|\\$\\)', '') . '\v' . comment.rpat
 
     if comment.rstr !=# ''
-      let [start_rwhite, end_rwhite] = matchstrpos(comment.rstr, '\s*$')[1:2]
-      let len_rpad = end_rwhite - start_rwhite
-      let len_rmargin = matchstrpos(comment.rstr, '^\s\+')[2]
+      let [start_rwhite, end_rwhite] = matchstrpos(comment.rstr, '\m\s*$')[1:2]
+      let len_padding = end_rwhite - start_rwhite
+      let len_margin = matchstrpos(comment.rstr, '\m^\s\+')[2]
 
-      let white_rmargin = repeat(' ', (type(margin) ==# v:t_list ? margin[1] : margin) - len_rmargin)
-      let white_rpad = repeat(' ', (type(padding) ==# v:t_list ? padding[1] : padding) - len_rpad)
+      let len_needed_margin = (type(margin) ==# v:t_list ? margin[1] : margin)
+      let len_needed_padding = (type(padding) ==# v:t_list ? padding[1] : padding)
+      let comment.len_rmargin = max([len_needed_margin, len_margin])
+      let comment.len_rpadding = max([len_needed_padding, len_padding])
 
-      let comment.rstr =  white_rpad . comment.rstr . white_rmargin
+      let white_margin = repeat(' ', len_needed_margin - len_margin)
+      let white_padding = repeat(' ', len_needed_padding - len_padding)
+
+      let comment.rstr =  white_padding . comment.rstr . white_margin
+    else
+      let comment.len_rmargin = 0
+      let comment.len_rpadding = 0
     endif
+    let comment.rpurestr = trim(comment.rstr, ' ')
 
     let comment.lmstr = '' " ' *' . white_lpad \" TODO: get this value from b:comments
+    let comment.lmpattern = '\C\s*\V' . escape(comment.lmstr, '\')
 
-    let comment.escs = map(escs, 'split(escape(v:val, "\\"), " ")')
-    for esc in comment.escs
-      let esc[1] = escape(esc[1], '&~')
-    endfor
+    let comment.escss = []
+    let comment.unescss = []
+
+    while !empty(escs)
+      let [_, op, sep, pat, sub, escs; _] = matchlist(escs, '\v^(.)(.)(.{-})\2(.{-})\2(.*)$')
+      if op ==# 's'
+        call add(comment.escss, [pat, sub])
+      elseif op ==# 'S'
+        call add(comment.unescss, [pat, sub])
+      elseif op ==# 'x'
+        call add(comment.escss,      ['\C\V' . escape(pat, '\'), escape(sub, '\&')])
+        call insert(comment.unescss, ['\C\V' . escape(sub, '\'), escape(pat, '\&')])
+      else
+        throw "commentr: Unknown escape operator: '" . op . "'"
+      endif
+    endwhile
+
+    function comment.escape(expr) abort
+      sandbox let expr = a:expr
+          \ | for [pat, sub] in self.escss
+          \ |   let expr = substitute(expr, pat, sub, 'g')
+          \ | endfor
+          \ | return expr
+    endfunction
+
+    function comment.unescape(expr) abort
+      sandbox let expr = a:expr
+          \ | for [pat, sub] in self.unescss
+          \ |   let expr = substitute(expr, pat, sub, 'g')
+          \ | endfor
+          \ | return expr
+    endfunction
 
     call add(comments, comment)
   endfor
 
   return comments
-endfunction
+endfunction " 3}}}
 
-" Example:
-" >
-"    call assert_equal(commentr#cms#getFileTypePrefix(['JaVA', 'sCRItp', 'foonctION'), 'javascript')
-" <
-function! s:getFileTypePrefix(parts)
+" Purpose: Tries guessing 
+function! s:getFiletypeFromSyn(synitem) abort
   " {{{3
+  let synname = synIDattr(a:synitem, 'name')
+  let parts = split(synname, '\ze[A-Z]')
+
   let found = 0 " this hack is needed because VimScript is presumably slower than C
-  let str = ' ' . tolower(a:parts[0])
+  let str = ' ' . tolower(parts[0])
   let next_part_idx = 1
-  let next_part = tolower(a:parts[next_part_idx])
+  let next_part = tolower(parts[next_part_idx])
   for [langs, com] in s:ft2com
     let idx = 0
 
@@ -575,11 +700,11 @@ function! s:getFileTypePrefix(parts)
       if next_part ==# strpart(langs, idx + strlen(str), strlen(next_part))
         let str .= next_part
         let next_part_idx += 1
-        if len(a:parts) >=# next_part_idx
+        if len(parts) >=# next_part_idx
           return str[1:]
         endif
 
-        let next_part = tolower(a:parts[next_part_idx])
+        let next_part = tolower(parts[next_part_idx])
       endif
 
       let idx = idx + 1
@@ -590,15 +715,44 @@ function! s:getFileTypePrefix(parts)
 endfunction " 3}}}
 
 " SECTION: Global functions {{{2
+
+" Purpose: Checks if cursor or the passed position is in or near of a
+" commented region.
+function g:commentr#IsCommented(...) abort range
+  let [lnum, col] = (a:0 ># 0 ? a:1 : [line('.'), col('.')])
+
+  if s:isCommentedAt(lnum, col)
+    return 1
+  endif
+
+  let line = getline(lnum)
+  let loffset = match(strpart(line, 0, col - 1), '\s*$')
+  let roffset = match(strpart(line, col - 1), '\S')
+
+  return s:isCommentedAt(lnum, loffset)
+        \  || s:isCommentedAt(lnum, col + roffset)
+endfunction
+
+function! g:commentr#ToggleCommentMotion(group)
+  " {{{4
+  let g:commentr_op_group = a:group
+  if !g:commentr#IsCommented()
+    let &g:opfunc = 'g:commentr#OpComment'
+  else
+    let &g:opfunc = 'g:commentr#OpUncomment'
+  endif
+  return 'g@'
+endfunction " 4}}}
+
 " Commenting {{{3
 
 " Example:
 " >
 "    nmap <expr> {mapping} commentr#CommentMotion('')
 " <
-function! g:commentr#CommentMotion(group)
+function! g:commentr#CommentMotion() abort
   " {{{4
-  let g:commentr_op_group = a:group
+  let g:commentr_op_group = get(a:, 1, '')
   let &g:opfunc = 'g:commentr#OpComment'
   return 'g@'
 endfunction " 4}}}
@@ -618,97 +772,25 @@ endfunction " 4}}}
 function! g:commentr#DoComment(...) abort range
   " {{{4
   let group = get(a:, 1, '')
-  silent! call repeat#set(":Comment " . escape(group, '\') . "\<CR>")
-
-
-  let orig_cur_pos = getcurpos()[1:2]
-  let real_ft = &ft
-
-  " guess filetype under cursor
-  let stack = call('synstack', orig_cur_pos)
-  if len(stack) > 0
-    for item in stack
-      let syn_name = synIDattr(item, 'name')
-
-      if strlen(syn_name) >=# 0
-        let tokens = split(syn_name, '\ze[A-Z]')
-        let real_ft = s:getFileTypePrefix(tokens)
-        break
-      endif
-
-    endfor
+  let force_linewise = (group =~# '^[A-Z]$')
+  let group = tolower(group)
+  " 'c' is a virtual comment group, stands for default.
+  if group ==# 'c'
+    let group = ''
   endif
 
-  call s:loadFileType(real_ft)
+  silent! call repeat#set(":Comment " . escape(group, '\') . "\<CR>")
 
-  let hooks = {
-  \   'enter': [],
-  \   'range-computed': [],
-  \   'comments-filtered': [],
-  \   'move-cursor': [],
-  \   'leave': [],
-  \ }
-
-  function! s:fireHook(name) abort closure
-    for Hook in hooks[a:name]
-      if type(Hook) ==# v:t_func
-        call Hook()
-      elseif type(Hook) ==# v:t_string
-        call execute(Hook)
-      else
-        throw 'commentr: hook has invalid type: ' . type(hook)
-      endif
-    endfor
-  endfunction
-
-  let continue = 1
-  for hook in extend((exists('b:commentr_exec_hooks') ? copy(b:commentr_exec_hooks) : []), g:commentr_exec_hooks)
-
-    if exists('hook.when')
-      let When = hook.when
-      if type(When) ==# v:t_dict
-        let ok = 1
-        for [var, val] in items(hook.on)
-          if l:{var} !=# val
-            let ok = 0
-            break
-          endif
-        endfor
-      elseif type(When) ==# v:t_func
-        let ok = call When()
-      endif
-
-      if !ok
-        continue
-      endif
-    endif
-
-    if exists('hook.on')
-      for [name, hook] in items(hook.on)
-        call add(hooks[name], hook)
-      endfor
-    endif
-
-    if !continue
-      break
-    endif
-
-  endfor
-  unlet! ok hook continue
+  let hooks = {}
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
-  call s:fireHook('enter')
+  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, force_linewise, a:firstline, a:lastline)
 
-  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:compute_range(mode)
+  let comments = filter(s:getCommentstring(), 'v:val.group ==# "' . escape(group, '/"') . '"')
 
-  call s:fireHook('range-computed')
-
-  let comments = filter(s:parse_commentstring(), 'v:val.group ==# "' . escape(group, '/"') . '"')
-
-  let min_dlen_lwhite = 2147483647
-  let min_lwhite = ''
+  let min_width_lwhite = 2147483647
   let can_lalign = start_col ># 1
   let can_ralign = end_col <# 2147483647
 
@@ -716,7 +798,7 @@ function! g:commentr#DoComment(...) abort range
   for i in range(len_comments - 1, 0, -1)
 
     let comment = comments[i]
-    if (comment.left_sel ==# '*' || start_col <=# 1) && (comment.right_sel ==# '*' || end_col ==# 2147483647)
+    if (comment.lsel ==# '*' || start_col <=# 1) && (comment.rsel ==# '*' || end_col ==# 2147483647)
       let len_comments -= 1
       call insert(comments, remove(comments, i), len_comments)
     endif
@@ -729,20 +811,20 @@ function! g:commentr#DoComment(...) abort range
       continue
     endif
 
-    let com_start = lnum !=# start_lnum && range_type !=# 'block' ? 1          : start_col
+    let com_start = lnum !=# start_lnum && range_type !=# 'block' ? 1 : start_col
 
-    if min_dlen_lwhite ># 0 || can_lalign
-      let [lwhite, zero, end_lwhite] = matchstrpos(line, '^\s\+')
-      let dlen_lwhite = strdisplaywidth(lwhite)
+    call assert_false(min_width_lwhite ==# 0 && can_lalign)
+    if min_width_lwhite ># 0
+      let nwhites = matchend(line, '\S') - 1
+      if nwhites >=# 0
+        let width_lwhite = strdisplaywidth(strpart(line, 0, nwhites))
 
-      if can_lalign
-        " just white before comment start
-        let can_lalign = com_start <=# end_lwhite + 1
-      endif
+        " Can we still align left?
+        let can_lalign = can_lalign && com_start <=# width_lwhite + 1
 
-      if dlen_lwhite <# min_dlen_lwhite
-        let min_dlen_lwhite = dlen_lwhite
-        let min_lwhite = lwhite
+        if width_lwhite <# min_width_lwhite
+          let min_width_lwhite = width_lwhite
+        endif
       endif
     elseif len_comments ==# 0 && !can_ralign
       break
@@ -751,7 +833,7 @@ function! g:commentr#DoComment(...) abort range
     let com_end   = lnum !=# end_lnum   && range_type !=# 'block' ? 2147483647 : end_col
 
     if can_ralign
-      let [rwhite, start_rwhite, end_rwhite] = matchstrpos(line, '\s*$')
+      let start_rwhite = matchstrpos(line, '\m\s*$')[1]
       let can_ralign = start_rwhite <=# com_end
     endif
 
@@ -761,39 +843,39 @@ function! g:commentr#DoComment(...) abort range
       " *    --- can be placed anywhere in the line
       " 0, ^ --- must be the first token
       " _    --- must be the first non-white token
-      let ls = comment.left_sel
+      let ls = comment.lsel
       if ls ==# '*'
         let must_include_start = 2147483647
-      elseif ls ==# '0'
+      elseif ls ==# '0' || ls ==# '^'
         let must_include_start = 1
       elseif ls ==# '_'
-        if !exists('dlen_lwhite')
+        if !exists('width_lwhite')
           let lwhite = matchstr(line, '^\s\+')
-          let dlen_lwhite = strdisplaywidth(lwhite)
+          let width_lwhite = strdisplaywidth(lwhite)
         endif
-        let must_include_start = dlen_lwhite + 1
+        let must_include_start = width_lwhite + 1
       endif
 
       " * --- can be placed anywhere in the line
       " $ --- must be the last token
       " _ --- must be the last non-white token
-      let rs = comment.right_sel
+      let rs = comment.rsel
       if rs ==# '*'
         let must_include_end = 0
       elseif rs ==# '_'
-        if !exists('dlen_rend')
+        if !exists('width_rend')
           if !exists('rwhite')
-            let [rwhite, start_rwhite, end_rwhite] = matchstrpos(line, '\s*$')
+            let [rwhite, start_rwhite, end_rwhite] = matchstrpos(line, '\m\s*$')
           endif
 
-          let dlen_rend = strdisplaywidth(strpart(line, 0, start_rwhite)])
+          let width_rend = strdisplaywidth(strpart(line, -1, start_rwhite)])
         endif
-        let must_include_end = dlen_rend
+        let must_include_end = width_rend
       elseif rs ==# '$'
-        if !exists('dlen_line')
-          let dlen_line = strdisplaywidth(line)
+        if !exists('width_line')
+          let width_line = strdisplaywidth(line)
         endif
-        let must_include_end = dlen_line
+        let must_include_end = width_line
       endif
 
       if com_start ># must_include_start || com_end <# must_include_end
@@ -801,7 +883,7 @@ function! g:commentr#DoComment(...) abort range
         let len_comments -= 1
       endif
     endfor
-    unlet! dlen_line dlen_lwhite dlen_rend
+    unlet! width_line width_lwhite width_rend
 
   endfor
 
@@ -813,30 +895,37 @@ function! g:commentr#DoComment(...) abort range
     let end_col = 2147483647
   endif
 
-  if min_dlen_lwhite ==# 2147483647
-    let min_dlen_lwhite = 0
+  if min_width_lwhite ==# 2147483647
+    let min_width_lwhite = 0
   endif
 
   if range_type ==# 'block' && start_col ==# 1 && end_col ==# 2147483647
     let range_type = 'char'
   endif
 
-  call s:fireHook('comments-filtered')
-
   if len(comments) ==# 0
-    echohl WarningMsg
-    echo "commentr: failed to comment region"
-    echohl None
-    return
+    throw "commentr: Cannot comment region"
   endif
 
-  let comment = comments[0]
+  " Sort comments.
+  " TODO: Use some A.I. here.
+  if force_linewise
+    let comment = comments[0]
+    for comm in comments
+      if comm.rstr ==# ''
+        let comment = comm
+      endif
+    endfor
+  else
+    let comment = comments[0]
+  endif
+
 
   let align = s:getOption('align', [group])
   let lalign = align[0]
   let ralign = align[1]
-
-  let max_dlen = 0
+  let will_com_after = comment.rstr !=# '' && range_type ==# 'block' && end_col ==# 2147483647 && ralign !~# '^[$<]$'
+  let max_width = 0
 
   for lnum in range(start_lnum, end_lnum)
     let line = getline(lnum)
@@ -854,15 +943,12 @@ function! g:commentr#DoComment(...) abort range
       let need_end    = 1
     endif
 
-    " echom lnum . ': ' . need_start . need_middle . need_end
-
+    " Note: com_{start,end} uses screen column indexes.
     let lline = strcharpart(line, 0, com_start - 1)
     let mline = strcharpart(line, com_start - 1, com_end - com_start + 1)
     let rline = strcharpart(line, com_end)
 
-    for [lesc, resc] in comment.escs
-      let mline = substitute(mline, '\V\C' . lesc, resc, 'g')
-    endfor
+    let mline = comment.escape(mline)
 
     if need_start || need_middle
       let lstr = need_start ? comment.lstr : comment.lmstr
@@ -870,31 +956,42 @@ function! g:commentr#DoComment(...) abort range
       if start_col ==# 1
         call assert_equal(lline, '')
 
-        if lalign ==# '0' || (lalign ==# '|' && min_dlen_lwhite ==# 0) || comment.left_sel ==# '0'
-          " do nothing
+        if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
+          " Do nothing.
         elseif lalign ==# '_'
-          let [s, a, lwhite_end] = matchstrpos(mline, '^\s*')
-          let lline = strcharpart(mline, 0, lwhite_end)
-          let mline = strcharpart(mline, lwhite_end)
+          let lwhite_end = matchstrpos(mline, '\m^\s*')[2]
+          let lline = strpart(mline, 0, lwhite_end)
+          let mline = strpart(mline, lwhite_end)
         elseif lalign ==# '|'
-          let i = 0
-          let p = 0
-          let n = 0
-          let l = strlen(line)
-          while min_dlen_lwhite ># n && i < l
-            let p = n
-            let n = strdisplaywidth(mline[0:i])
-            let i += 1
+          " Note: Lines up to `min_width_lwhite` contains only
+          " single-width white characters.
+
+          let width = 0 " Width of white prefix.
+          let len = min_width_lwhite " Length of white prefix.
+
+          while 1
+            let prev_width = width " Width of previously examined white prefix.
+            let lline = strpart(mline, 0, len)
+            let width = strdisplaywidth(lline)
+            if min_width_lwhite >=# width
+              break
+            endif
+
+            let len -= 1
           endwhile
 
-          "echom lnum . ': ' . min_dlen_lwhite . ', ' . n
-          "FIXME:
-          if min_dlen_lwhite ==# n
-            let lline = strpart(mline, 0, i)
-            let mline = mline[i:]
+          if min_width_lwhite ==# width
+            " Comment is inserted at character border.
+            let mline = strpart(mline, len)
           else
-            let lline = mline[0:i - 1] . repeat(' ', min_dlen_lwhite - p)
-            let mline = repeat(' ', n - min_dlen_lwhite) . mline[i:]
+            " Need to break tabs apart.
+            "          /min_width_lwhite
+            "         V
+            " | | |\t      | | |
+            "     ^- width ^- prev_width
+
+            let lline .= repeat(' ', min_width_lwhite - width)
+            let mline = repeat(' ', prev_width - min_width_lwhite) . strpart(mline, len)
           endif
 
         endif
@@ -905,14 +1002,14 @@ function! g:commentr#DoComment(...) abort range
       if lstr[0] ==# ' '
         let lstr = lstr[!(lline[-1:] =~# '\S'):]
       endif
-      " whitespaces are required in insert mode
-      if lstr[-1:] ==# ' ' && mode !=# 'i'
+      if empty(mline) && lstr[-1:] ==# ' ' && mode !=# 'i'
         let lstr = lstr[:-1 - !(mline[0] =~# '\S')]
       endif
 
       let mline = lstr . mline
-      if !exists('cur_first_pos')
-        let cur_first_pos = [lnum, len(lline) + len(lstr) + 1]
+      if !exists('first_curpos')
+        " Note: Needs byte offset.
+        let first_curpos = [lnum, strlen(lline) + strlen(lstr) + 1]
       endif
     endif
 
@@ -922,157 +1019,233 @@ function! g:commentr#DoComment(...) abort range
       if end_col ==# 2147483647 && (range_type ==# 'block' && comment.rstr !=# '')
 
         if ralign ==# '$'
-          " do nothing
+          " Do nothing.
         else
-          let [rwhite, start_rwhite, end_rwhite] = matchstrpos(mline, '\s*$')
+          let start_rwhite = matchstrpos(mline, '\m\s*$')[1]
           let mline = strpart(mline, 0, start_rwhite)
           if ralign ==# '<'
-            " do nothing
+            " Do nothing.
           else
             let skip_rcom = 1
           endif
         endif
       endif
 
-      if !exists('cur_last_pos')
-        let cur_last_pos = [lnum, len(lline) + len(mline) + (&selection ==# 'exclusive')]
+      if !exists('last_curpos')
+        " Note: Needs byte offset.
+        let last_curpos = [lnum, strlen(lline) + strlen(mline) + (&selection ==# 'exclusive')]
       endif
 
       if rline ==# ''
-        let start_rwhite = matchstrpos(comment.rstr, '\s*$')[1]
-        let mline .= strpart(comment.rstr, 0, start_rwhite)
+        if !will_com_after
+          let start_rwhite = matchstrpos(comment.rstr, '\m\s*$')[1]
+          let mline .= strpart(comment.rstr, 0, start_rwhite)
+        endif
       else
         let mline .= comment.rstr
       endif
     endif
 
     let new_line = lline . mline . rline
-    let dlen_new_line = strdisplaywidth(new_line)
-    if max_dlen <# dlen_new_line
-      let max_dlen = dlen_new_line
+    let new_line_width = strdisplaywidth(new_line)
+    if max_width <# new_line_width
+      let max_width = new_line_width
     endif
 
     call setline(lnum, new_line)
   endfor
 
-  if comment.rstr !=# '' && range_type ==# 'block' && end_col ==# 2147483647 && ralign !=# '$' && ralign !=# '<'
-    " right: < last non-white
-    "        $ end (append)
-    "        > align to &tw
-    "        t shiftwidth, spaces
-    "        f function
-    "        | align to longest
-    " relative line ending align
+  if will_com_after
+    let start_rwhite = matchstrpos(comment.rstr, '\m\s*$')[1]
+    let rstr_rtrim = strpart(comment.rstr, 0, start_rwhite)
+
+    if ralign ==# '|'
+      let needed_width = max_width
+    elseif ralign ==# 'I'
+      let needed_width = &textwidth - strlen(rstr_rtrim)
+    elseif ralign ==# '>'
+      let needed_width = (&textwidth ># 0 ? &textwidth : max_width) - strlen(rstr_rtrim)
+    else
+      throw 'commentr: Unimplemented'
+    endif
+
     for lnum in range(start_lnum, end_lnum)
       let line = getline(lnum)
-      let dlen_line = strdisplaywidth(line)
+      let width_line = strdisplaywidth(line)
 
-      if !exists('cur_last_pos')
-        let cur_last_pos = [lnum, dlen_line + 1]
+      if !exists('last_curpos')
+        let last_curpos = [lnum, width_line + 1]
       endif
 
-      if ralign ==# '|'
-        let needed_len = max_dlen
-      elseif ralign ==# '>'
-        let needed_len = &tw - strlen(comment.rstr)
-      endif
+      let diff = needed_width - width_line
+      let line .= repeat(' ', diff) . rstr_rtrim
 
-      let diff = needed_len - dlen_line
-      if diff ># 0
-        let line .= repeat(' ', diff)
-      endif
-
-      let line .= comment.rstr
       call setline(lnum, line)
     endfor
   endif
 
   if mode ==# 'i'
-    call cursor(cur_first_pos)
+    call cursor(first_curpos)
   elseif mode ==? 'v' || mode ==? 's'
     exe "normal! \<ESC>"
-    call cursor(cur_first_pos)
+    call cursor(first_curpos)
     exe "normal! " . mode
-    call cursor(cur_last_pos)
+    call cursor(last_curpos)
   elseif mode ==# "\<C-V>" || mode ==# "\<C-S>"
     exe "normal! \<ESC>"
   endif
-
-  call s:fireHook('leave')
-
 endfunction " 4}}}
 
 " Uncommenting {{{3
-function g:commentr#Uncomment() abort range
+function! g:commentr#UncommentMotion(...) abort range
   " {{{4
+  let g:commentr_op_group = get(a:, 1, '')
   let &g:opfunc = 'g:commentr#OpUncomment'
   return 'g@'
 endfunction " 4}}}
 
-function g:commentr#OpUncomment(cmd) abort
+function! g:commentr#OpUncomment(mode) abort
   " {{{4
-  call g:commentr#DoUncomment(a:cmd)
+  let g:commentr_mode_override = a:mode
+  call g:commentr#DoUncomment(g:commentr_op_group)
 endfunction " 4}}}
 
 " Removes one level of comment from selection.
-function g:commentr#DoUncomment() abort
+function! g:commentr#DoUncomment(...) abort range
   " {{{4
+  let winview = winsaveview()
+  let group = get(a:, 1, '')
+  let force_linewise = (group =~# '^[A-Z!]$')
+  let group = tolower(group)
+  " 'c' is a virtual comment group, stands for default.
+  if group ==# 'c'
+    let group = ''
+  endif
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
   silent! call repeat#set(":Uncomment\<CR>")
 
-  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:compute_range(mode)
+  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, force_linewise, a:firstline, a:lastline)
 
-  let comments = s:parse_commentstring()
+  let comments = s:getCommentstring()
+  if group !~# '^[*!]$'
+    let comments = filter(comments, 'v:val.group ==# "' . escape(group, '/"') . '"')
+  endif
 
-  call cursor(start_lnum, start_col)
+  while 1
+    for i in range(len(comments) - 1, 0, -1)
+      let comment = comments[i]
+      if !exists('comment.nextstart')
+      \  || !s:posbefore([start_lnum, start_col], comment.nextstart)
 
-  let comment_regions = []
+        let comment.nextend = 0
+        let comment.nextstart = 0
+        unlet comment.nextend
+        unlet comment.nextstart
 
-  " we assume that file is well-aligned
+        call cursor(start_lnum, start_col)
 
-  for comment in comments
-
-    if comment.rstr ==# ''
-      call cursor(start_lnum, start_col)
-
-      while 1
-        let [cstart_lnum, cstart_col] = searchpos('\C\V' . escape(comment.lstr, '\'), 'ceWz', end_lnum)
-        if cstart_lnum ==# 0
-          break
+        let cstart = s:searchpos(comment.lpat, end_lnum)
+        if cstart ==# [0, 0]
+          call remove(comments, i)
+          continue
         endif
 
-        let [cend_lnum, cend_col] = [cstart_lnum, 2147483647]
-        call cursor(cstart_lnum + 1, 1)
-      endwhile
+        if comment.rstr ==# ''
+          let cend = [cstart[0], 2147483647]
+        else
+          if comment.escape(comment.rstr) ==# comment.rstr
+            let cend = searchpairpos(comment.lpat, '', comment.rpat, 'nrW', s:sskip)
+            if cend ==# [0, 0]
+              throw 'commentr: Unbalanced block comment at ' . cstart[0] . ':' . cstart[1]
+              call remove(comments, comment)
+            endif
+
+          else
+            let cend = s:searchpos(comment.rpat, end_lnum)
+            if cend ==# [0, 0]
+              continue
+            endif
+
+          endif
+        endif
+
+        let comment.nextstart = cstart
+        let comment.nextend = cend
+      endif
+
+      if exists('comment.nextstart')
+        if !exists('nextcomment')
+        \  || s:posbefore(comment.nextstart, nextcomment.nextstart)
+          let nextcomment = comment
+        endif
+      endif
+    endfor
+
+    if !exists('nextcomment')
+      break
+    endif
+
+    let [cstart_lnum, cstart_col] = nextcomment.nextstart
+    let [cend_lnum, cend_col] = nextcomment.nextend
+
+    for lnum in range(cstart_lnum, cend_lnum)
+      let line = getline(lnum)
+
+      if lnum ==# cstart_lnum
+        let lcom_start = cstart_col - 1
+        let lcom_len = strlen(nextcomment.lpurestr)
+      elseif !empty(nextcomment.lmstr)
+        let lcom_start = searchpos(nextcomment.lmpattern, "cWn", lnum)[1] - 1
+        let lcom_len = lcom_start !=# 0 ? strlen(nextcomment.lmstr) : 0
+      else
+        let lcom_start = 0
+        let lcom_len = 0
+      endif
+
+      if lnum ==# cend_lnum
+        let rcom_start = cend_col - 1
+        let rcom_len = strlen(nextcomment.rpurestr)
+      else
+        let rcom_start = 2147483647
+        let rcom_len = 0
+      endif
+
+      " FIXME: Convert spaces to tabs.
+      " Note: c{start,end} uses column indexes.
+      let lline = strpart(line, 0, lcom_start)
+      let mline = strpart(line, lcom_start + lcom_len, rcom_start - lcom_start - lcom_len)
+      let rline = strpart(line, rcom_start + rcom_len)
+
+      let lline = strpart(lline, 0, matchstrpos(lline, '\m\C\s\{,' . nextcomment.len_lmargin . '}$')[1])
+      let mstart = matchstrpos(mline, '\m\C^\s\{,' . nextcomment.len_lpadding . '}')[2]
+      let mend = matchstrpos(mline, '\m\C\s\{,' . nextcomment.len_rpadding . '}$')[1]
+      let mline = strpart(mline, mstart, mend - mstart)
+      let rline = strpart(rline, matchstrpos(lline, '\m\C^\s\{,' . nextcomment.len_rmargin . '}$')[1])
+
+      let mline = comment.unescape(mline)
+
+      let line = lline . mline . rline
+      let start_rwhite = matchstrpos(line, '\m\s*$')[1]
+      let line = strpart(line, 0, start_rwhite)
+
+      call setline(lnum, line)
+    endfor
+
+    if cend_col < 2147483647
+      let start_lnum = cend_lnum
+      let start_col = cend_col
     else
-      let matched = searchpos('\C\V' . escape(comment.lstr, '\'), 'nWz', end_lnum)
-      if !matched
-        continue
-      endif
-
-      let [cstart_lnum, cstart_col] = searchpairpos('\C\V' . escape(comment.lstr, '\'), '', '\C\V' . escape(comment.rstr, '\'), 'nrW', '', end_lnum)
-      if cstart_lnum ==# 0
-        continue
-      endif
-
-      let [cend_lnum, cend_col] = searchpairpos('\C\V' . escape(comment.lstr, '\'), '', '\C\V' . escape(comment.rstr, '\'), 'bnW', '', end_lnum)
-      if cend_lnum !=# 0
-        break
-      endif
-
+      let start_lnum = cend_lnum + 1
+      let start_col = 1
     endif
 
-    if   (start_lnum ==# cstart_lnum && start_col ># cstart_col)
-    \ || (end_lnum   ==# cend_lnum   && end_col   ># cend_col)
-      continue
-    endif
+    unlet nextcomment
+  endwhile
 
-  endfor
-  exe 'silent! ' . com_start[0] . 's/\C\V' . escape(b:commentr[com_name], '/') . '//Ie'
-
+  call winrestview(winview)
 endfunction " 4}}}
 
 " SECTION: Cleanup-Boilerplate {{{1

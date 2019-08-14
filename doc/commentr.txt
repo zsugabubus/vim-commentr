@@ -36,6 +36,23 @@ COMMANDS						*commentr-commands*
 CONFIGURATION					*commentr-configuration*
 
 ------------------------------------------------------------------------------
+Filetype guessing					*commentr_ft_noguess*
+							*g:commentr_ft_noguess*
+
+Specifies filetypes to disable filetype guesses. Values can be a {List} of
+filetypes or "*" to disable all kind of guesses.
+
+Example: >
+	let g:commentr_ft_noguess = { 'c': ['cpp'] }
+<	When 'filetype' is "c", disable "cpp" guesses. It's needed because
+	"cpp" uses syntax items from "c", so this way commentr would guess you
+	are editing "cpp" inside "c". It can cause issues when you edit C89
+	where there are no "//" comments. >
+	let g:commentr_ft_noguess = { 'html': '*' }
+<	Only use "html" comments inside a "html" file. Don't try to guess
+	based on syntax.
+
+------------------------------------------------------------------------------
 Comment margin						*commentr_margin*
 							*g:commentr_margin*
 							*b:commentr_margin*
@@ -43,6 +60,12 @@ Comment margin						*commentr_margin*
 Margin around comments. It can be a {Number} or a {Dictionary} that specifies
 margin to being used per "group".
 
+>
+	let g:commentr_margin = 3;
+
+	     [<->]           [<->]
+	Lorem     /* ispum */     dolor
+<
 ------------------------------------------------------------------------------
 Comment padding						*commentr_padding*
 							*g:commentr_padding*
@@ -52,9 +75,11 @@ Padding inside comments. It can be a {Number} or a {Dictionary} that specifies
 padding to being used per "group".
 
 Examples: >
-         let g:commentr_margin = { '': 1, 'd': 0, 'default': 5 }
-<
+	let g:commentr_margin = { '': 1, 'd': 0, 'default': 5 }
 
+	            [<->]       [<->]
+	Lorem /*      ispum      */ dolor
+<
 ------------------------------------------------------------------------------
 Comment alignment					*commentr_align*
 							*g:commentr_align*
@@ -108,8 +133,18 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 3|      field1,<
 		 4|   }<
 <
-	>	Remove trailing whites and stretch line to 'textwidth'
-		character wide by inserting spaces.
+	|	Remove trailing whites and place right part of comment to one
+		column and as left as possible. Note that lines may be longer
+		than 'textwidth'.
+>
+		 1|   struct foobar {<
+		 2|    field1,       <
+		 3|      field1,     <
+		 4|   }              <
+<
+	I, >	Remove trailing whites and stretch line to 'textwidth'
+		character wide by inserting spaces. When no 'textwidth' is
+		specified, ">" is the same as "|", "I" is the same as "$".
 >
 		set &textwidth=15
 
@@ -120,17 +155,8 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 3|      field1, <
 		 4|   }          <
 <
-	|	Remove trailing whites and place right part of comment to one
-		column and as left as possible. Note that lines may be longer
-		than 'textwidth'.
->
-		 1|   struct foobar {<
-		 2|    field1,       <
-		 3|      field1,     <
-		 4|   }              <
-<
 --------------------------------------------------------------------------------
-Builtin mappings					*commentr_no_mappings*
+Default mappings					*commentr_no_mappings*
 							*g:commentr_no_mappings*
 
 1 to disable builtin mappings, otherwise enable. See |commentr_map_leader| and
@@ -150,10 +176,10 @@ List of builtin mappings			*commentr-builtin-mappings*
 If |commentr_no_mappings| is not enabled the following mappings will be used.
 
 Note: <group> is the assigned keybinding of "group", specified by
-|commentr_map_group| .
+|commentr_map_group|.
 
 Note: <xLeader> is the assigned keybinding of mode "x", specified by
-|commentr_map_leader| .
+|commentr_map_leader|.
 
 Normal mode mappings:
 
@@ -171,6 +197,9 @@ Normal mode mappings:
 				comment below.
 <nLeader><group>O		Jump with |O| and insert comment, i.e. insert
 				comment above.
+<nLeader>C{motion}		Comment out lines moved over by {motion}.
+				Note: It is only defined for default comment
+				group.
 
 Visual mode mappings:
 <vLeader><group>c		Comment out selected area.
@@ -194,16 +223,16 @@ the following modes:
 See |commentr-builtin-mappings| for builtin mappings.
 
 Examples: >
-         { 'nvi': '<C-\>' }
-         { 'vn': '<C-\>', 'i': '<C-\>c' }
-         { 'n': '<C-\>',  'v': '<C-\>', 'i': '<C-\>c' }
-<         Use same leader for multiple modes by grouping keys. Note that order
-         doesn't count. >
-         '<C-\>'
-<         Use one leader for all modes. >
-         { 'n': '<Leader>c' }
-<         Disable mappings by omitting keys. In this case just normal mode
-         mappings will be used.
+	{ 'nvi': '<C-Leader>' }
+	{ 'vn': '<C-Leader>', 'i': '<C-Leader>' }
+	{ 'n': '<C-Leader>',  'v': '<C-Leader>', 'i': '<C-Leader>' }
+<	Use same leader for multiple modes by grouping keys. Note that order
+	doesn't count. >
+	'<C-Leader>'
+<	Use one leader for all modes. >
+	{ 'n': '<Leader>' }
+<	Disable mappings by omitting keys. In this case just normal mode
+	mappings will be used.
 
 
 See |commentr-builtin-mappings| for builtin mappings.
@@ -218,28 +247,56 @@ Used internally for mapping a specific comment group to a binding. It's a
 any {String} that specifies commenting with a comment from that group.
 
 Examples: >
-         { '': '', 'm': 'm', 'd': 'DDD' }
-<         Empty string means the default group. In this example it will be
-         translated to "", so you can comment out the current line (with a
-         comment from the default, "" group) with "<nLeader>cc". Inserting an
-         "m" comment above happens with "<nLeader>cmO"... etc. Moreover a
-         binding can be any {String}, as stated above, so for example appending
-         a "d" comment: "<nLeader>cDDDA". See |commentr-builtin-mappings| for
-         more. >
-         { '': '', 't': 'a' }
-<         In normal mode "" comments will be attached under "<nLeader>" and "t"
-         comments will be attached under "<nLeader>a". However in this case you
-         have to keep in mind that "<nLeader>{motion}" and "<nLeader>a..."
-         mappings are colliding with each other, so please pay attention and
-         avoid situations like this.
+	{ 'c': '', 'cm': 'm', 'cd': 'DDD' }
+<	Empty string means the default group. In this example it will be
+	translated to "", so you can comment out the current line (with a
+	comment from the default, "" group) with "<nLeader>cc". Inserting an
+	"m" comment above happens with "<nLeader>cmO"... etc. Moreover a
+	binding can be any {String}, as stated above, so for example appending
+	a "d" comment: "<nLeader>cDDDA". See |commentr-builtin-mappings| for
+	more. >
+	{ 'c': '', 'ct': 'a' }
+<	In normal mode "" comments will be attached under "<nLeader>" and "t"
+	comments will be attached under "<nLeader>a". However in this case you
+	have to keep in mind that "<nLeader>{motion}" and "<nLeader>a..."
+	mappings are colliding with each other, so please pay attention and
+	avoid situations like this.
 
 ==============================================================================
 Comment template				*commentr-comment-template*
 						*b:commentr_cache.commentstring*
 
-It's just like 'commentstring' with some added features.
+It is just like 'commentstring' with some added features. Alternatives
+separated by "," just like in 'commentstring'. One-one token have the
+following format:
 
-Sorry, for the poor documentation, see "autoload/commentr.vim" for examples.
+	"\=x"		Specify group to be use for current and further
+			comments. Optional. Internally, "\=d" used for
+			documentation and "\=m" for module comments.
+
+	"\0" "\^"	Left alignment requirements. Optional.
+	\_
+
+	Format of comment. "%s" will be replaced with the
+	comment text. If omitted, "%s" will be appended to the end of
+	the value. Required.
+
+	"\$"		Right alignment requirements. Optional.
+	"\_"		For comment formats without right sides (e.g "//%s"),
+			it defaults to "\$", otherwise no requirements will be
+			specified.
+
+	",,"		Separate comment format from escape sequences.
+			Optional.
+
+	"x/{\pat}/{\sub}/"	Swap {\pat} with {\sub} when (un)commenting.
+				{\pat} and {\sub} are "\" escaped before
+				passed to the regex engine. 'noignorecase' and
+				"very nomagic" ("\C\V") are used.
+	"s/{pat}/{sub}/"	Substitute {pat} with {sub} when commenting.
+	"S/{pat}/{sub}/"	Substitute {pat} with {sub} when uncommenting.
+
+See "autoload/commentr.vim" for examples.
 
 ==============================================================================
 CONTRIBUTIONS					*commentr-contributions*

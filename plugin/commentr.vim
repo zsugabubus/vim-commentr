@@ -1,4 +1,5 @@
 " LICENSE: GPLv3 or later
+" AUTHOR: zsugabubus
 
 " SECTION: Init-Boilerplate {{{1
 if exists('g:loaded_commentr')
@@ -25,51 +26,28 @@ endfunction " 2}}}
 
 " SECTION: Initialization {{{1
 
-" " SECTION: Autocommands {{{2
-" au FileType * call g:commentr#cms#onFileTypeChanged()
-
 " SECTION: Commands {{{2
 command -range -nargs=? Comment if mode() ==# 'n' | <line1>,<line2>call g:commentr#DoComment(<f-args>) | else | call g:commentr#DoComment(<f-args>) | endif
-command -nargs=? CommentMotion "g@"
-command Uncomment call g:commentr#DoUncomment()
+command Uncomment call g:commentr#DoUncomment('*')
+command UncommentLines call g:commentr#DoUncomment('!')
+command -range ToggleComment if g:commentr#IsCommented()
+      \ | if mode(1) ==# 'n'
+      \ | <line1>,<line2>call g:commentr#DoUncomment()
+      \ | else | call g:commentr#DoUncomment() | endif
+      \ | else
+      \ | if mode(1) ==# 'n' | <line1>,<line2>call g:commentr#DoComment() | else | call g:commentr#DoComment() | endif | endif
 
 " SECTION: Kepmaps {{{2
-nmap <silent> <expr> <Plug>(Comment)            commentr#Comment('')
+" nmap <silent> <expr> <Plug>(Comment)            commentr#Comment('')
 
 " SECTION: Variables {{{2
+call s:initVariable('g:commentr_ft_noguess', { 'c': ['cpp'] })
 call s:initVariable('g:commentr_margin', 0)
 call s:initVariable('g:commentr_padding', 1)
 call s:initVariable('g:commentr_align', '|$')
 call s:initVariable('g:commentr_no_mappings', 0)
-call s:initVariable('g:commentr_map_leader', { 'nv': '<Leader>c', 'i': '<C-\>c'})
-call s:initVariable('g:commentr_map_group', { '': '', 't': 't', 'd': 'd', 'm': 'm' })
-
-" function! g:YankLine(...)
-"   exe 'norm! _yg_'
-"   return { 'wom_op': 'lines' }
-" endfunction
-
-"function! g:PadAppend(...)
-"  let sp = getcurpos()
-"
-"  let min_spaces = &ts / 2
-"  let line = getline(sp[1])
-"  let line = substitute(line, '\s*$', '', 'Ie')
-"
-"  let spaces_to_ins = min_spaces + (&ts - (len(line) + min_spaces) % &ts) % &ts
-"  let spaces = repeat(' ', spaces_to_ins)
-"
-"  call setline(sp[1], line . spaces)
-"
-"  let sp[2] = len(line) + spaces_to_ins
-"
-"  return { 'com_op': 'insert', 'op': sp }
-"endfunction
-
-" call s:initVariable('g:commentr_exec_hooks', [{ 'when': { 'com_op': 'append-end' }, 'run': { 'before': function('g:PadAppend'), 'after': 'startinsert!' } }])
-" call s:initVariable('g:commentr_exec_hooks', [{ 'on': { 'com_op': 'yank-lines' }, 'run': 'g:YankLine' }])
-call s:initVariable('g:commentr_exec_hooks', [])
-
+call s:initVariable('g:commentr_map_leader', { 'nv': '<Leader>', 'i': '<C-Leader>' })
+call s:initVariable('g:commentr_map_group', { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm' })
 
 " SECTION: Keybindings {{{2
 if !g:commentr_no_mappings
@@ -84,15 +62,17 @@ if !g:commentr_no_mappings
 
   for [s:binding, s:com_type] in items(g:commentr_map_group)
     let s:com_type = escape(s:com_type, "'")
-    let s:ccmd = "<Cmd>Comment " . s:com_type . "<CR>"
+    let s:ccmd = "<Cmd>ToggleComment " . s:com_type . "<CR>"
 
     if exists('g:commentr_map_leader.n')
-      exec "nmap <unique> <silent> <expr> " . g:commentr_map_leader.n . s:binding . " commentr#CommentMotion('" . s:com_type . "')"
+      exec "nmap <unique> <silent> <expr> " . g:commentr_map_leader.n . s:binding . " commentr#ToggleCommentMotion('" . s:com_type . "')"
       exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "c  " . s:ccmd
-      exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "A A" . s:ccmd
-      exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "I I" . s:ccmd
-      exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "o o" . s:ccmd
-      exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "O O" . s:ccmd
+      if s:com_type =~# '^$\|^[a-z]$'
+        exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "A A" . s:ccmd
+        exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "I I" . s:ccmd
+        exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "o o" . s:ccmd
+        exec "nmap <unique> <silent> " . g:commentr_map_leader.n . s:binding . "O O" . s:ccmd
+      endif
     endif
 
     if exists('g:commentr_map_leader.i')
@@ -105,15 +85,16 @@ if !g:commentr_no_mappings
   endfor
 
   if exists('g:commentr_map_leader.n')
-    exec "nmap <unique> <silent> " . g:commentr_map_leader.n . "u <Cmd>Uncomment<CR>"
+    exec "nmap <unique> <silent> <expr> " . g:commentr_map_leader.n . 'cu' . " commentr#UncommentMotion('!')"
+    exec "nmap <unique> <silent> " . g:commentr_map_leader.n . "cuu <Cmd>Uncomment<CR>"
   endif
 
   if exists('g:commentr_map_leader.i')
-    exec "imap <unique> <silent> " . g:commentr_map_leader.i . "u <Cmd>Uncomment<CR>"
+    exec "imap <unique> <silent> " . g:commentr_map_leader.i . "cu <Cmd>Uncomment<CR>"
   endif
 
   if exists('g:commentr_map_leader.v')
-    exec "vmap <unique> <silent> " . g:commentr_map_leader.v . "u <Cmd>Uncomment<CR>"
+    exec "vmap <unique> <silent> " . g:commentr_map_leader.v . "cu <Cmd>Uncomment<CR>"
   endif
 
 end
