@@ -1,13 +1,18 @@
 " LICENSE: GPLv3 or later
 " AUTHOR: zsugabubus
 
+" TODO: Stabilize escape sequences, escpecially for "c/cpp".
+" TODO: Think out a hook system if neccesarry.
+" TODO: Improve comment ranker.
+" TODO: Test, test, test.
+
 " SECTION: Init-Boilerplate {{{1
 let s:save_cpo = &cpo
 set cpo&vim
 
 " SECTION: Variables {{{1
 let s:html_comment = '<!--%s-->,,x/&/&amp;/x/--/&#45;&#45;/'
-let s:ft2com = [
+let s:ft2cms = [
 \   [ ' aap ampl ansible apache apachestyle awk bash bc cfg cl cmake
       \ conkyrc crontab cucumber cython dakota debcontrol debsources
       \ desktop dhcpd diff dockerfile ebuild ecd eclass elixir elmfilt
@@ -302,8 +307,12 @@ let s:ft2com = [
 \     '(:%s:)'
 \   ],
 \ ]
-
 unlet s:html_comment
+
+for [s:lang, s:cms] in items(g:commentr_commentstrings)
+  call insert(s:ft2cms, [' ' . s:lang . ' ', s:cms])
+endfor
+unlet! s:lang s:cms
 
 let s:sskip_string = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'
 
@@ -405,10 +414,12 @@ function! s:getFiletypeStrings(ft) abort
   " {{{3
   let found = 0
   let spaced_ft = ' ' . a:ft . ' '
-  for [langs, com] in s:ft2com
+  for [langs, cms] in s:ft2cms
     if stridx(langs, spaced_ft) >=# 0
-      let found = 1
-      let commentstring = com
+      if !empty(cms)
+        let found = 1
+        let commentstring = cms
+      endif
       break
     endif
   endfor
@@ -710,7 +721,7 @@ function! s:getFiletypeFromSyn(synitem) abort
   let str = ' ' . tolower(parts[0])
   let next_part_idx = 1
   let next_part = tolower(parts[next_part_idx])
-  for [langs, com] in s:ft2com
+  for [langs, _] in s:ft2cms
     let idx = 0
 
     while 1
@@ -742,7 +753,7 @@ endfunction " 3}}}
 
 " Purpose: Checks if cursor or the passed position is in or near of a
 " commented region.
-function g:commentr#IsCommented(...) abort range
+function! g:commentr#IsCommented(...) abort range
   let [lnum, col] = (a:0 ># 0 ? a:1 : [line('.'), col('.')])
 
   if s:isCommentedAt(lnum, col)
@@ -830,7 +841,6 @@ function! g:commentr#DoComment(...) abort range
 
     let com_start = lnum !=# start_lnum && range_type !=# 'block' ? 1 : start_col
 
-    call assert_false(min_width_lwhite ==# 0 && can_lalign)
     if min_width_lwhite ># 0
       let nwhites = matchend(line, '\S') - 1
       if nwhites >=# 0
@@ -847,7 +857,7 @@ function! g:commentr#DoComment(...) abort range
       break
     endif
 
-    let com_end   = lnum !=# end_lnum   && range_type !=# 'block' ? 2147483647 : end_col
+    let com_end = lnum !=# end_lnum   && range_type !=# 'block' ? 2147483647 : end_col
 
     if can_ralign
       let start_rwhite = matchstrpos(line, '\m\s*$')[1]
@@ -904,11 +914,12 @@ function! g:commentr#DoComment(...) abort range
 
   endfor
 
-  if can_lalign
+  " Start and end positions are fix in insert mode.
+  if can_lalign && mode !=# 'i'
     let start_col = 1
   endif
 
-  if can_ralign
+  if can_ralign && mode !=# 'i'
     let end_col = 2147483647
   endif
 
@@ -924,8 +935,8 @@ function! g:commentr#DoComment(...) abort range
     throw "commentr: cannot comment region"
   endif
 
-  " Sort comments.
-  " TODO: Use some A.I. here.
+  " Rank comments.
+  " TODO: Use some advanced A.I. here.
   if env.force_linewise
     let comment = comments[0]
     for comm in comments
@@ -1204,11 +1215,9 @@ function! g:commentr#DoUncomment(...) abort range
 
     let has_lmstr = nextcomment.lmstr !=# ''
     if has_lmstr
-      echom nextcomment.lmpat . '|'
-      for lnum in range(cstart_lnum + 1, cend_lnum)
+      for lnum in range(cstart_lnum + 1, cend_lnum - 1)
         call cursor(lnum, 1)
         if searchpos(nextcomment.lmpat, "cWn", lnum) ==# [0, 0]
-          echoe lnum
           let has_lmstr = 0
           break
         endif
@@ -1224,7 +1233,12 @@ function! g:commentr#DoUncomment(...) abort range
         let lcom_len = strlen(nextcomment.lpurestr)
       elseif has_lmstr
         let lcom_start = searchpos(nextcomment.lmpat, "cWn", lnum)[1] - 1
-        let lcom_len = strlen(nextcomment.lmstr)
+        if lcom_start >=# 0
+          let lcom_len = strlen(nextcomment.lmstr)
+        else
+          let lcom_start = 0
+          let lcom_len = 0
+        endif
       else
         let lcom_start = 0
         let lcom_len = 0

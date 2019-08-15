@@ -77,6 +77,18 @@ commentr#ToggleCommentMotion({flags})	*commentr#ToggleCommentMotion()*
 CONFIGURATION					*commentr-configuration*
 
 ------------------------------------------------------------------------------
+Custom commentstrings				*g:commentr_commentstrings*
+
+Mapping between 'filetype's and |commentr-comment-string|s. Expects a
+{Dictionary}. If an empty value is specified, filetype will be removed from
+internal lookup table.
+
+Example: >
+	let g:commentr_commentstrings = { "x": "", "c": "//*/%s" }
+<	Only use standard 'commentstring' and 'comment' for filetype "x".
+	Change commentstring for "c".
+
+------------------------------------------------------------------------------
 Filetype guessing					*commentr_ft_noguess*
 							*g:commentr_ft_noguess*
 

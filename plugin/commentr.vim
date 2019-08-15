@@ -33,6 +33,7 @@ command -range -nargs=? ToggleComment if mode() ==# 'n'
 for [s:name, s:def] in [
 \   ['commentr_ft_noguess', { 'c': ['cpp'] }],
 \   ['commentr_no_mappings', 0],
+\   ['commentr_commentstrings', {}],
 \   ['commentr_default_flags', '*|0[1]0$'],
 \   ['commentr_bindings', { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+' }]
 \ ]
@@ -53,7 +54,7 @@ if !g:commentr_no_mappings
 
     exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
     exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'c  ' . s:ccmd
-    if s:flags !~# '[A-Z]'
+    if s:flags !~# '\v([A-Z]|\=)'
       exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'A A' . s:ccmd
       exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'I I' . s:ccmd
       exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'o o' . s:ccmd
