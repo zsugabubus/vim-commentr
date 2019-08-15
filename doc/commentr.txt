@@ -47,8 +47,10 @@ COMMANDS						*commentr-commands*
 
 :[range]ToggleComment	[flags]					*:ToggleComment*
 			If the text under the cursor is uncommented sam as
-			|:Comment| otherwise |:Uncomment| .
-			For more see |:Comment| .
+			|:Comment| otherwise |:Uncomment|. Determining whether
+			a text is commented is based on syntax item under and
+			around cursor.
+			For more see |:Comment|.
 
 
 List of funtions:					*commentr-functions*
