@@ -14,67 +14,59 @@ endif
 let s:save_cpo = &cpo
 set cpo&vim
 
-" SECTION: Helper Functions {{{1
-function! s:initVariable(name, default_value) abort
-  " {{{2
-  if !exists(a:name)
-    let {a:name} = a:default_value
-    return 1
-  endif
-  return 0
-endfunction " 2}}}
-
 " SECTION: Initialization {{{1
-
 " SECTION: Commands {{{2
 command -range -nargs=? Comment if mode() ==# 'n'
-  \ |   <line1>,<line2>call g:commentr#DoComment(<f-args>)
+  \ |   <line1>,<line2>call commentr#DoComment(<f-args>)
   \ | else
-  \ |   call g:commentr#DoComment(<f-args>)
+  \ |   call commentr#DoComment(<f-args>)
   \ | endif
-command Uncomment call g:commentr#DoUncomment('*')
-command UncommentLines call g:commentr#DoUncomment('!')
+command Uncomment call commentr#DoUncomment('*')
+command UncommentLines call commentr#DoUncomment('!')
 command -range -nargs=? ToggleComment if mode() ==# 'n'
-  \ |   <line1>,<line2>call g:commentr#Do{g:commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
+  \ |   <line1>,<line2>call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
   \ | else
-  \ |   call g:commentr#Do{g:commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
+  \ |   call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
   \ | endif
 
-" SECTION: Kepmaps {{{2
+" SECTION: Variables {{{2
+for [s:name, s:def] in [
+\   ['commentr_ft_noguess', { 'c': ['cpp'] }],
+\   ['commentr_no_mappings', 0],
+\   ['commentr_flags', '*|0[1]0$'],
+\   ['commentr_bindings', { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+' }]
+\ ]
+  if !has_key(g:, s:name)
+    let g:{s:name} = s:def
+  endif
+endfor
+unlet s:name s:def
+
+" SECTION: Keybindings {{{2
 map <silent> <Leader> <Plug>(CommentrComment)
 map <silent> <Leader>cu <Plug>(CommentrUncomment)
 
-" SECTION: Variables {{{2
-call s:initVariable('g:commentr_ft_noguess', { 'c': ['cpp'] })
-call s:initVariable('g:commentr_margin', 0)
-call s:initVariable('g:commentr_padding', 1)
-call s:initVariable('g:commentr_align', '|$')
-call s:initVariable('g:commentr_no_mappings', 0)
-call s:initVariable('g:commentr_bindings', { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': '>C' })
-
-" SECTION: Keybindings {{{2
 if !g:commentr_no_mappings
   for [s:binding, s:flags] in items(g:commentr_bindings)
-    let s:flags = escape(s:flags, "'")
-    let s:ccmd = "<Cmd>ToggleComment " . s:flags . "<CR>"
+    let s:flags = escape(s:flags, "\\'")
+    let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'
 
-    exec "nmap <unique> <silent> <expr> <Plug>(CommentrComment)" . s:binding . " commentr#ToggleCommentMotion('" . s:flags . "')"
-    exec "nmap <unique> <silent> <Plug>(CommentrComment)" . s:binding . "c  " . s:ccmd
+    exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
+    exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'c  ' . s:ccmd
     if s:flags !~# '[A-Z]'
-      exec "nmap <unique> <silent> <Plug>(CommentrComment)" . s:binding . "A A" . s:ccmd
-      exec "nmap <unique> <silent> <Plug>(CommentrComment)" . s:binding . "I I" . s:ccmd
-      exec "nmap <unique> <silent> <Plug>(CommentrComment)" . s:binding . "o o" . s:ccmd
-      exec "nmap <unique> <silent> <Plug>(CommentrComment)" . s:binding . "O O" . s:ccmd
+      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'A A' . s:ccmd
+      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'I I' . s:ccmd
+      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'o o' . s:ccmd
+      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'O O' . s:ccmd
     endif
-    exec "imap <unique> <silent> <Plug>(CommentrComment)" . s:binding . "i " . s:ccmd
-    exec "vmap <unique> <silent> <Plug>(CommentrComment)" . s:binding . "c " . s:ccmd
+    exec 'imap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'i ' . s:ccmd
+    exec 'vmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'c ' . s:ccmd
   endfor
 
-  exec "nmap <unique> <silent> <expr> <Plug>(CommentrUncomment)" . " commentr#UncommentMotion('!')"
-  exec "nmap <unique> <silent> <Plug>(CommentrUncomment)" . "u <Cmd>Uncomment<CR>"
-  exec "vmap <unique> <silent> <Plug>(CommentrUncomment)" . " <Cmd>Uncomment<CR>"
-
-end
+  exec 'nmap <unique> <silent> <expr> <Plug>(CommentrUncomment)' . ' commentr#UncommentMotion("*=")'
+  exec 'nmap <unique> <silent> <Plug>(CommentrUncomment)' . 'u <Cmd>Uncomment<CR>'
+  exec 'vmap <unique> <silent> <Plug>(CommentrUncomment)' . ' <Cmd>Uncomment<CR>'
+endif
 
 " SECTION: Cleanup-Boilerplate {{{1
 let &cpo = s:save_cpo

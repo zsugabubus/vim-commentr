@@ -1,8 +1,6 @@
 " LICENSE: GPLv3 or later
 " AUTHOR: zsugabubus
 
-" FIXME: \=c does not behave as default group.
-
 " SECTION: Init-Boilerplate {{{1
 let s:save_cpo = &cpo
 set cpo&vim
@@ -307,79 +305,54 @@ let s:ft2com = [
 
 unlet s:html_comment
 
-let s:sskip = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'
+let s:sskip_string = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'
 
 " SECTION: Functions {{{1
 " SECTION: Local functions {{{2
-function! s:parseFlagsArg(flags) abort
-  let r = {}
-  let r.group = matchstr(a:flags, '[a-zA-Z]')
-  let r.use_lmstr = match(a:flags, '>') !=# -1
-  let r.force_linewise = (r.group =~# '\m^[A-Z]$')
+function! s:getEnviron(flags) abort
+  let env = {}
 
-  let r.group = tolower(r.group)
-  " 'c' is a virtual comment group, stands for default.
-  if r.group ==# 'c'
-    let r.group = ''
-  endif
-
-  return r
-endfunction
-
-function! s:getOption(opt_name, ...) abort
-  " {{{3
-  let var_name = ':commentr_' . a:opt_name
-
-  if exists('g' . var_name)
-    let var = g{var_name}
-    let global_var = type(var) ==# v:t_dict ? var : { 'default': var }
-  else
-    let global_var = {}
-  end
-
-  if exists('b' . var_name)
-    let var = b{var_name}
-    let buffer_var = type(var) ==# v:t_dict ? var : { 'default': var }
-  else
-    let buffer_var = {}
-  end
-
-  let var = extend(copy(global_var), buffer_var)
-
-  if exists('a:1')
-    call filter(a:1, 'v:val !=# ""')
-    let l = len(a:1)
-  else
-    let l = 0
-  endif
-
-  let msb = float2nr(pow(2, l))
-  for i in range(msb - 1, 1, -1)
-    let key = ''
-
-    let bit = msb
-    for j in range(0, l - 1)
-      let bit = bit / 2
-      if and(i, bit)
-        let key .= '_' . a:1[j]
+  for flags in type(a:flags) ==# v:t_list ? a:flags : [a:flags]
+    for [name, pat, type] in [
+    \   ['group',          '\v^([a-zA-Z*])',    v:t_string],
+    \   ['allow_lmstr',    '\v(\+)',            v:t_bool],
+    \   ['force_linewise', '\v^[a-zA-Z*](\=)$', v:t_bool],
+    \   ['force_linewise', '\v^([A-Z])$',       v:t_bool],
+    \   ['lalign',         '\v([0_|])\d*[',     v:t_string],
+    \   ['lmargin',        '\v(\d+)[',          v:t_number],
+    \   ['lpadding',       '\v[(\d+)',          v:t_number],
+    \   ['rpadding',       '\v(\d+)]',          v:t_number],
+    \   ['rmargin',        '\v](\d+)',          v:t_number],
+    \   ['ralign',         '\v]\d*([$<>I|])',   v:t_string]
+    \ ]
+      let val = matchlist(flags, pat)
+      if !empty(val)
+        let env[name] =
+          \ type ==# v:t_bool ? !empty(val[1]) :
+          \ type ==# v:t_number ? str2nr(val[1], 10) :
+          \ val[1]
+      elseif !has_key(env, name)
+        let env[name] = type ==# v:t_bool || type == v:t_number ? 0 : ''
       endif
     endfor
-
-    let key = key[1:]
-    if has_key(var, key)
-      return var[key]
-    end
   endfor
 
-  return var['default']
-endfunction " 3}}}
+  let env.group = tolower(env.group)
+  " 'c' is a virtual comment group, stands for default.
+  if env.group ==# 'c'
+    let env.group = ''
+  endif
+
+  let env.comments = s:getComments(env)
+  return env
+endfunction
 
 function! s:searchpos(pattern, stopline) abort
   " {{{3
   let flags = 'cWz'
   while 1
     let pos = searchpos(a:pattern, flags, a:stopline)
-    if pos ==# [0, 0] || !eval(s:sskip)
+    if pos ==# [0, 0] || !eval(s:sskip_string)
       return pos
     endif
     " Start searching from one column right.
@@ -465,11 +438,16 @@ function! s:getFiletypeStrings(ft) abort
 endfunction " 3}}}
 
 " Purpose: Fill internal commentstring entries.
-function! s:getCommentstring() abort
+function! s:getComments(cfg) abort
   " {{{3
+  if !exists('b:commentr_cache')
+    let b:commentr_cache = {}
+  endif
+
   for guessedft in s:guessFiletypes()
     " If it's in the cache, it surely exists.
-    if exists('b:commentr_cache.' . guessedft)
+    if has_key(b:commentr_cache, guessedft)
+    \  && b:commentr_cache[guessedft].cfg ==# a:cfg
       break
     endif
 
@@ -478,15 +456,14 @@ function! s:getCommentstring() abort
       continue
     endif
 
-    if !exists('b:commentr_cache')
-      let b:commentr_cache = {}
-    endif
-
-    let b:commentr_cache[guessedft] = s:parseCommentstring(commentstring, comments)
+    let b:commentr_cache[guessedft] = {
+    \   'comments': s:parseCommentstring(a:cfg, commentstring, comments),
+    \   'cfg': a:cfg
+    \ }
     break
   endfor
 
-  return deepcopy(b:commentr_cache[guessedft])
+  return deepcopy(b:commentr_cache[guessedft].comments)
 endfunction " 3}}}
 
 " Purpose: Return range for (un)commenting.
@@ -523,7 +500,7 @@ function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort
     let [end_lnum, end_col]     = [start_lnum, start_col ># 1 ? start_col - 1 : 1]
     let range_type = 'char'
   else
-    throw 'commentr: Unknown mode: ' . a:mode
+    throw 'commentr: unknown mode: ' . a:mode
   endif
 
   if start_lnum ># end_lnum
@@ -554,7 +531,7 @@ endfunction " 3}}}
 
 " Purpose: Parse commentstring and comments to a commentr consumable
 " format.
-function! s:parseCommentstring(commentstring, comments) abort
+function! s:parseCommentstring(cfg, commentstring, comments) abort
   " {{{3
   let comments = []
 
@@ -569,81 +546,76 @@ function! s:parseCommentstring(commentstring, comments) abort
       let group = grp
     endif
 
-    let comment = {}
+    if a:cfg.group !=# '*' && a:cfg.group !=# group
+      continue
+    endif
 
-    let margin = s:getOption('margin', [group])
-    let padding = s:getOption('padding', [group])
+    let comment = {}
 
     let comment.group = group
 
     let lcom = substitute(lcom, '\\,', ',', 'g')
-    if lcom =~# '\m^\\[0^_]'
-      let comment.lstr = lcom[2:]
-      let comment.lsel = lcom[1]
-      if comment.lsel ==# '_'
-        let comment.lpat = '^\s*'
-      else
-        let comment.lpat = '^'
-      endif
-    else
-      let comment.lstr = lcom
-      let comment.lsel = '*'
-      let comment.lpat = ''
-    endif
-    let comment.lpat = '\C' . comment.lpat . '\V' . substitute(substitute(escape(comment.lstr, '\'), '\m^\s\+', '\\(\\s\\|\\^\\)', ''), '\m\s\+$', '\\(\\s\\|\\$\\)', '')
+    let [_, _, lsel, lstr; _] = matchlist(lcom, '\v^(\\([0^_]))?(.*)$')
+    let comment.lstr = lstr
+    let comment.lsel = !empty(lsel) ? lsel : '*'
+    let comment.lpat =
+      \ '\m\C' .
+      \ {
+      \   '0': '^',
+      \   '^': '^',
+      \   '_': '^\s*',
+      \   '*': ''
+      \ }[comment.lsel]
+      \ . '\V' .
+      \ substitute(
+      \   substitute(
+      \     escape(comment.lstr, '\'),
+      \   '\m^\s\+', '\\(\\s\\|\\^\\)', ''),
+      \ '\m\s\+$', '\\(\\s\\|\\$\\)', '')
 
     let [_, start_white, end_white] = matchstrpos(comment.lstr, '\m\s*$')
     let len_padding = end_white - start_white
-    let len_margin = matchend(comment.lstr, '\S') -1
+    let len_margin = matchend(comment.lstr, '\S') - 1
 
-    let len_needed_margin = (type(margin) ==# v:t_list ? margin[0] : margin)
-    let len_needed_padding = (type(padding) ==# v:t_list ? padding[0] : padding)
-    let comment.len_lmargin = max([len_needed_margin, len_margin])
-    let comment.len_lpadding = max([len_needed_padding, len_padding])
-
-    let white_margin = repeat(' ', len_needed_margin - len_margin)
-    let white_padding = repeat(' ', len_needed_padding - len_padding)
+    let comment.len_lmargin = max([a:cfg.lmargin, len_margin])
+    let comment.len_lpadding = max([a:cfg.lpadding, len_padding])
 
     let comment.lpurestr = trim(comment.lstr, ' ')
-    let comment.lstr = white_margin . comment.lstr . white_padding
+    let comment.lstr =
+      \ repeat(' ', a:cfg.lmargin - len_margin) .
+      \   comment.lstr .
+      \     repeat(' ', a:cfg.lpadding - len_padding)
 
     let rcom = substitute(rcom, '\\,', ',', 'g')
-    if rcom =~# '\\[$_]$'
-      let comment.rstr = rcom[:-3]
-      let comment.rsel = rcom[-1]
-    else
-      let comment.rstr = rcom
-      if comment.rstr ==# ''
-        " line comment
-        let comment.rsel = '$'
-      else
-        " block comment
-        let comment.rsel = '*'
-      endif
-    endif
-    if comment.rsel ==# '_'
-      let comment.rpat = '\s*$'
-    elseif comment.rsel ==# '$'
-      let comment.rpat = '$'
-    else
-      let comment.rpat = ''
-    endif
-    let comment.rpat =  '\C\V' . substitute(substitute(escape(comment.rstr, '\'), '\m^\s\+', '\\(\\s\\|\\^\\)', ''), '\m\s\+$', '\\(\\s\\|\\$\\)', '') . '\v' . comment.rpat
+    let [_, rstr, _, rsel; _] = matchlist(rcom, '\v^(.{-})(\\([$_]))?$')
+    let comment.rstr = rstr
+    let comment.rsel = !empty(rsel) ? rsel : (empty(rsel) ? '$' : '*')
+    let comment.rpat =
+      \ '\C\V' .
+      \ substitute(
+      \   substitute(
+      \     escape(comment.rstr, '\'),
+      \   '\m^\s\+', '\\(\\s\\|\\^\\)', ''),
+      \'\m\s\+$', '\\(\\s\\|\\$\\)', '')
+      \ . '\v' .
+      \ {
+      \   '$': '$',
+      \   '_': '\s*$',
+      \   '*': ''
+      \ }[comment.rsel]
 
     if comment.rstr !=# ''
       let [_, start_rwhite, end_rwhite] = matchstrpos(comment.rstr, '\m\s*$')
       let len_padding = end_rwhite - start_rwhite
       let len_margin = matchend(comment.rstr, '\S') - 1
 
-      let len_needed_margin = (type(margin) ==# v:t_list ? margin[1] : margin)
-      let len_needed_padding = (type(padding) ==# v:t_list ? padding[1] : padding)
-      let comment.len_rmargin = max([len_needed_margin, len_margin])
-      let comment.len_rpadding = max([len_needed_padding, len_padding])
+      let comment.len_rmargin = max([a:cfg.rmargin, len_margin])
+      let comment.len_rpadding = max([a:cfg.rpadding, len_padding])
 
-      let white_margin = repeat(' ', len_needed_margin - len_margin)
-      let white_padding = repeat(' ', len_needed_padding - len_padding)
-
-      let comment.rstr =  white_padding . comment.rstr . white_margin
+      let comment.rstr =
+        \ repeat(' ', a:cfg.rpadding - len_padding) .
+        \   comment.rstr .
+        \     repeat(' ', a:cfg.rmargin - len_margin)
     else
       let comment.len_rmargin = 0
       let comment.len_rpadding = 0
@@ -663,7 +635,7 @@ function! s:parseCommentstring(commentstring, comments) abort
         call add(comment.escss,      ['\C\V' . escape(pat, '\'), escape(sub, '\&')])
         call insert(comment.unescss, ['\C\V' . escape(sub, '\'), escape(pat, '\&')])
       else
-        throw "commentr: Unknown escape operator: '" . op . "'"
+        throw "commentr: unknown escape operator: '" . op . "'"
       endif
     endwhile
 
@@ -709,7 +681,7 @@ function! s:parseCommentstring(commentstring, comments) abort
     if flags =~# 'e'
       " FIXME: Take account alignments.
       for comment in comments
-        if   !exists('comment.lmstr')
+        if   !has_key(comment, 'lmstr')
         \ && trim(comment.lstr, ' ') ==# trim(sme.s, ' ')
         \ && trim(comment.rstr, ' ') ==# trim(sme.e, ' ')
           let comment.lmstr = sme.m
@@ -719,10 +691,10 @@ function! s:parseCommentstring(commentstring, comments) abort
   endfor
 
   for comment in comments
-    if !exists('comment.lmstr')
+    if !has_key(comment, 'lmstr')
       let comment.lmstr = ''
     endif
-    let comment.lmpattern = '\C\s*\V' . escape(comment.lmstr, '\')
+    let comment.lmpat = '\m\C\s*\V' . escape(comment.lmstr, '\')
   endfor
 
   return comments
@@ -824,18 +796,16 @@ endfunction " 4}}}
 function! g:commentr#DoComment(...) abort range
   " {{{4
   let flags = get(a:, 1, '')
-  let args = s:parseFlagsArg(flags)
+  let env = s:getEnviron([g:commentr_flags, flags])
 
-  silent! call repeat#set(":Comment " . escape(args.group, '\') . "\<CR>")
-
-  let hooks = {}
+  silent! call repeat#set(':Comment ' . escape(flags, '\') . '\<CR>')
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
-  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, args.force_linewise, a:firstline, a:lastline)
+  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, env.force_linewise, a:firstline, a:lastline)
 
-  let comments = filter(s:getCommentstring(), 'v:val.group ==# "' . escape(args.group, '/"') . '"')
+  let comments = env.comments
 
   let min_width_lwhite = 2147483647
   let can_lalign = start_col ># 1
@@ -951,12 +921,12 @@ function! g:commentr#DoComment(...) abort range
   endif
 
   if len(comments) ==# 0
-    throw "commentr: Cannot comment region"
+    throw "commentr: cannot comment region"
   endif
 
   " Sort comments.
   " TODO: Use some A.I. here.
-  if args.force_linewise
+  if env.force_linewise
     let comment = comments[0]
     for comm in comments
       if comm.rstr ==# ''
@@ -967,14 +937,12 @@ function! g:commentr#DoComment(...) abort range
     let comment = comments[0]
   endif
 
-  if !args.use_lmstr
+  if !env.allow_lmstr
     let comment.lmstr = ''
   endif
 
-  let align = s:getOption('align', [args.group])
-  let lalign = align[0]
-  let ralign = align[1]
-  let will_com_after = comment.rstr !=# '' && range_type ==# 'block' && end_col ==# 2147483647 && ralign !~# '^[$<]$'
+  let [lalign, ralign] = [env.lalign, env.ralign]
+  let will_com_after = comment.rstr !=# '' && range_type ==# 'block' && end_col ==# 2147483647 && ralign !~# '\m^[$<]$'
   let max_width = 0
 
   for lnum in range(start_lnum, end_lnum)
@@ -1116,7 +1084,7 @@ function! g:commentr#DoComment(...) abort range
     elseif ralign ==# '>'
       let needed_width = (&textwidth ># 0 ? &textwidth : max_width) - strlen(rstr_rtrim)
     else
-      throw 'commentr: Unimplemented'
+      throw 'commentr: unimplemented'
     endif
 
     for lnum in range(start_lnum, end_lnum)
@@ -1165,24 +1133,22 @@ function! g:commentr#DoUncomment(...) abort range
   " {{{4
   let winview = winsaveview()
   let flags = get(a:, 1, '')
-  let args = s:parseFlagsArg(flags)
+  let env = s:getEnviron([g:commentr_flags, flags])
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
-  silent! call repeat#set(":Uncomment\<CR>")
+  silent! call repeat#set(':Uncomment' . escape(flags, '\') . '\<CR>')
 
-  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, args.force_linewise, a:firstline, a:lastline)
+  let [start_lnum, start_col, end_lnum, end_col, range_type] =
+    \ s:computeRange(mode, env.force_linewise, a:firstline, a:lastline)
 
-  let comments = s:getCommentstring()
-  if args.group !~# '^[*!]$'
-    let comments = filter(comments, 'v:val.group ==# "' . escape(args.group, '/"') . '"')
-  endif
+  let comments = env.comments
 
   while 1
     for i in range(len(comments) - 1, 0, -1)
       let comment = comments[i]
-      if !exists('comment.nextstart')
+      if !has_key(comment, 'nextstart')
       \  || !s:posbefore([start_lnum, start_col], comment.nextstart)
 
         let comment.nextend = 0
@@ -1202,9 +1168,9 @@ function! g:commentr#DoUncomment(...) abort range
           let cend = [cstart[0], 2147483647]
         else
           if comment.escape(comment.rstr) ==# comment.rstr
-            let cend = searchpairpos(comment.lpat, '', comment.rpat, 'nrW', s:sskip)
+            let cend = searchpairpos(comment.lpat, '', comment.rpat, 'nrW', s:sskip_string)
             if cend ==# [0, 0]
-              throw 'commentr: Unbalanced block comment at ' . cstart[0] . ':' . cstart[1]
+              throw 'commentr: unbalanced block comment at ' . cstart[0] . ':' . cstart[1]
               call remove(comments, comment)
             endif
 
@@ -1221,7 +1187,7 @@ function! g:commentr#DoUncomment(...) abort range
         let comment.nextend = cend
       endif
 
-      if exists('comment.nextstart')
+      if has_key(comment, 'nextstart')
         if !exists('nextcomment')
         \  || s:posbefore(comment.nextstart, nextcomment.nextstart)
           let nextcomment = comment
@@ -1238,8 +1204,11 @@ function! g:commentr#DoUncomment(...) abort range
 
     let has_lmstr = nextcomment.lmstr !=# ''
     if has_lmstr
+      echom nextcomment.lmpat . '|'
       for lnum in range(cstart_lnum + 1, cend_lnum)
-        if searchpos(nextcomment.lmpattern, "cWn", lnum) ==# [0, 0]
+        call cursor(lnum, 1)
+        if searchpos(nextcomment.lmpat, "cWn", lnum) ==# [0, 0]
+          echoe lnum
           let has_lmstr = 0
           break
         endif
@@ -1248,13 +1217,14 @@ function! g:commentr#DoUncomment(...) abort range
 
     for lnum in range(cstart_lnum, cend_lnum)
       let line = getline(lnum)
+      call cursor(lnum, 1)
 
       if lnum ==# cstart_lnum
         let lcom_start = cstart_col - 1
         let lcom_len = strlen(nextcomment.lpurestr)
       elseif has_lmstr
-        let lcom_start = searchpos(nextcomment.lmpattern, "cWn", lnum)[1] - 1
-        let lcom_len = lcom_start !=# 0 ? strlen(nextcomment.lmstr) : 0
+        let lcom_start = searchpos(nextcomment.lmpat, "cWn", lnum)[1] - 1
+        let lcom_len = strlen(nextcomment.lmstr)
       else
         let lcom_start = 0
         let lcom_len = 0
