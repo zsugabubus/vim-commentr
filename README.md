@@ -8,7 +8,8 @@ The bestest commenter plugin for Vim you have ever dreamed about.
 - Need to comment out something in the middle of the line, or a whole indention level? Not a problem. Be even more productive and comment with the full power of **motions**. Insert comments above, below, left, right, anywhere you want.
 - Fear of opening Markdown, HTML, Vue files because they contain multiple syntax elements? Good news, commentr is here to save you. It's f*cking **syntax aware** and does **proper comment (un)escapes**.
 - Get bored and feel like you need custom styled comments? Add your **custom comment types and bindings**. Insert documentation or module comments to Rust and C/C++ code out of box. Anyway, you will surely find what you need among the more thousand builtin filetypes.
-- **One-liner filetype configuration** that's compatible with `&comments`. In reality, it's an extension to `&comments`. You can even change that it `'modeline'` and commentr will use that.
+- **One-liner filetype configuration** that's compatible with `'commentstring'`. In reality, it's an extension to `&comments`. You can even change that it `'modeline'` and commentr will use that.
+- **Sexy as hell**: Parses `''comments'` for middle parts of three-piece comments.
 - Do you still use other silly commenter plugin? What are you waiting for? Install!
 
 ## Installation
@@ -28,18 +29,11 @@ NeoBundle 'zsugabubus/vim-commentr'
 
 ## Documentation
 
-Please see `:help commentr`.
+See `:help commentr`.
 
 ## Quick Usage
 
-- `<Leader>cc`: Toggle comment for current line.
-- `<Leader>cA`: Append comment.
-- `<Leader>cO`: Insert comment before.
-- `<Leader>cip`: Toggle comment for paragraph.
-- `<Leader>cii`: Toggle comment for indention.
-- `<Leader>c{motion}`: Comment over motion.
-- `<Leader>C{motion}`: Comment lines over motion.
-- `<Leader>cdO`: Insert documentation comment above.
+See `:help commentr-builtin-mappings`
 
 ## ToDo List
 
