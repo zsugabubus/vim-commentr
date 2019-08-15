@@ -10,9 +10,9 @@ A powerful commenter plugin.
 ==============================================================================
 COMMANDS						*commentr-commands*
 
-:[range]Comment	[group]						*:Comment*
+:[range]Comment	[flags]						*:Comment*
 			Comment a range of text.
-			Range is automagically derived from current mode.
+			Range is automagically calculated from current mode.
 
 			|mode()|	range
 			n		The given [range]. Note that if no
@@ -30,7 +30,46 @@ COMMANDS						*commentr-commands*
 
 			Calling in every other mode is an error.
 
-			For [group] see |commentr-comment-template|.
+			Example: >
+				map {binding} <Cmd>Comment<CR>
+				map {binding} <Cmd>Uncomment<CR>
+<				Calculates region from current mode.
+
+			For flags see |commentr-flags|.
+
+:[range]Uncomment						*:Uncomment*
+			Uncomment a range of text.
+			See |:Comment| for how range is calculated.
+
+:[range]UncommentLines					*:UncommentLines*
+			Same as |:Uncomment|, but force linewise mode.
+			See |:Comment| for how range is calculated.
+
+:[range]ToggleComment	[flags]					*:ToggleComment*
+			If the text under the cursor is uncommented sam as
+			|:Comment| otherwise |:Uncomment| .
+			For more see |:Comment| .
+
+
+List of funtions:					*commentr-functions*
+
+commentr#CommentMotion({flags})			*commentr#CommentMotion()*
+		Can be used to comment text over motion. This way |:Comment|
+		will be called in |Operator-pending-mode|. Using together with
+		|:map-<expr>|, it's a convenient way to specify commenting over
+		predefined motions.  Example: >
+			nmap <expr> gc; commentr#CommentMotion('') . 'f;'
+<		comments out line to the next ";". >
+			map <expr> gcc
+			  \ '_' . commentr#CommentMotion({flags}) . '$'
+<		Comment out current line, starting from the first non-white
+		character.
+
+commentr#UncommentMotion({flags})			*commentr#CommentMotion()*
+		Same as |commentr#CommentMotion()|, but it calls |:Uncomment|.
+
+commentr#ToggleCommentMotion({flags})	*commentr#ToggleCommentMotion()*
+		Same as |commentr#CommentMotion()|, but it calls |:ToggleComment|.
 
 ==============================================================================
 CONFIGURATION					*commentr-configuration*
@@ -45,9 +84,9 @@ filetypes or "*" to disable all kind of guesses.
 Example: >
 	let g:commentr_ft_noguess = { 'c': ['cpp'] }
 <	When 'filetype' is "c", disable "cpp" guesses. It's needed because
-	"cpp" uses syntax items from "c", so this way commentr would guess you
-	are editing "cpp" inside "c". It can cause issues when you edit C89
-	where there are no "//" comments. >
+	"cpp" uses syntax items from "c", so this way commentr would guess
+	that currently "cpp" code is edited inside "c". It can cause issues
+	when using C89 where there are no "//" comments. >
 	let g:commentr_ft_noguess = { 'html': '*' }
 <	Only use "html" comments inside a "html" file. Don't try to guess
 	based on syntax.
@@ -155,148 +194,188 @@ Note that <Tab> charaters will be split into spaces where necessary.
 		 3|      field1, <
 		 4|   }          <
 <
---------------------------------------------------------------------------------
-Default mappings					*commentr_no_mappings*
+
+------------------------------------------------------------------------------
+Disable default bindings				*commentr_no_mappings*
 							*g:commentr_no_mappings*
 
-1 to disable builtin mappings, otherwise enable. See |commentr_map_leader| and
-|commentr_map_groups| if you want to customize builtin mappings, or |:Comment|
-if you want specify your own mappings.
+1 to disable builtin mappings, otherwise enable.
 
-Specifying your own mapping is as easy as: >
-    map <silent> {binding} <Cmd>Comment<CR>
-    map <silent> <expr> {binding} commentr#CommentMotion('{group}')
+See |commentr_bindings|, for customizing builtin mappings, or
+|commentr-commands| and |commentr-functions| for how to add custom mappings.
+
+------------------------------------------------------------------------------
+Default bindings					*g:commentr_bindings*
+
+Used for mapping a specific keybinding fragment to a commenting flag. It is a
+{Dictionary} that contains items in the format of "binding": "flags". See
+|commentr-flags| for what "flags" can be. "binding" can be any {String} that
+specifies a valid key combination. It will be used in the following format for
+adding builtin mappings: "<Plug>(CommentrComment){binding}".
+
+Examples: >
+	{ 'c': '', 'cm': 'm', 'cd': 'DDD' }
+	{ 'c': '', 'ct': 'a' }
 <
+
+List of plugin keys:				*commentr-builtin-keys*
+
+<Plug>(CommentrComment)
+	Used for toggling comments.
+
+<Plug>(CommentrUncomment)
+	Used for
+
 Example: >
-        nmap <silenc> <expr> gc; commentr#CommentMotion('') . 'f;'
-<        Comment out everything until the next ";". >
+	nmap gc <Plug>(CommentrComment)
+	nmap gcu <Plug>(CommentrUncomment)
+<	Change prefix of default mappings only in normal mode.
 
 List of builtin mappings			*commentr-builtin-mappings*
 
 If |commentr_no_mappings| is not enabled the following mappings will be used.
 
-Note: <group> is the assigned keybinding of "group", specified by
-|commentr_map_group|.
-
-Note: <xLeader> is the assigned keybinding of mode "x", specified by
-|commentr_map_leader|.
-
 Normal mode mappings:
 
-<nLeader><group>{motion}	Comment out text moved over by {motion}.
-<nLeader><group>c		Comment out current line. It can be treated as
-				a shortcut to "_<nLeader>$" but uses internal
-				alignment specifiers from |commentr_align|
-				instead of jumping with "_" and "$" to
-				position parts of the comment.
-<nLeader><group>A		Jump with |A| and insert comment, i.e. append
-				comment.
-<nLeader><group>I		Jump with |I| and insert comment, i.e. prepend
-				comment.
-<nLeader><group>o		Jump with |o| and insert comment, i.e. insert
-				comment below.
-<nLeader><group>O		Jump with |O| and insert comment, i.e. insert
-				comment above.
-<nLeader>C{motion}		Comment out lines moved over by {motion}.
-				Note: It is only defined for default comment
-				group.
+<Plug>(CommentrComment)<binding>{motion}
+	Toggle comment on text moved over by {motion}.
+	Note that every top-level comments will be removed even if its end is
+	after {motion}.
+
+<Plug>(CommentrComment)<binding>c
+	Toggle comment on current line. It can be treated as a shortcut to
+	"_<Plug>(CommentrComment)$" but uses internal alignment specifiers
+	from |commentr_align| instead of jumping with "_" and "$" to position
+	parts of the comment.
+
+<Plug>(CommentrComment)<binding>A
+	Jump with |A| and insert comment, i.e. append comment.
+
+<Plug>(CommentrComment)<binding>I
+	Jump with |I| and insert comment, i.e. prepend comment.
+
+<Plug>(CommentrComment)<binding>o
+	Jump with |o| and insert comment, i.e. insert comment below.
+
+<Plug>(CommentrComment)<binding>O
+	Jump with |O| and insert comment, i.e. insert comment above.
+
+<Plug>(CommentrComment)C{motion}
+	Comment out lines moved over by {motion}.
+	Note: It is only defined for default comment group.
+
+<Plug>(CommentrComment)x
+	Toggle so called "sexy" comments.
+
+<Plug>(CommentrUncomment){motion}
+	Uncomment lines moved over {motion}
+
+<Plug>(CommentrUncomment)u
+	Uncomment current line.
 
 Visual mode mappings:
-<vLeader><group>c		Comment out selected area.
+
+<Plug>(CommentrComment)<group>c
+	Comment out regin.
+
+<Plug>(CommentrUncomment)
+	Uncomment region.
 
 Insert mode mappings:
-<iLeader><group>i		Insert comment at the place of the cursor.
 
---------------------------------------------------------------------------------
-Leader key bindings					*commentr_map_leader*
-							*g:commentr_map_leader*
-
-If |commentr_no_mappings| is disabled, specifies leader keys per mode, i.e.
-the root of the subsequent bindings. |commentr| provides builtin mappings for
-the following modes:
-
-	key     mode
-	n	|Normal-mode|
-	v	|Visual-mode| (affects |Select-mode| also)
-	i	|Insert-mode|
-
-See |commentr-builtin-mappings| for builtin mappings.
-
-Examples: >
-	{ 'nvi': '<C-Leader>' }
-	{ 'vn': '<C-Leader>', 'i': '<C-Leader>' }
-	{ 'n': '<C-Leader>',  'v': '<C-Leader>', 'i': '<C-Leader>' }
-<	Use same leader for multiple modes by grouping keys. Note that order
-	doesn't count. >
-	'<C-Leader>'
-<	Use one leader for all modes. >
-	{ 'n': '<Leader>' }
-<	Disable mappings by omitting keys. In this case just normal mode
-	mappings will be used.
-
-
-See |commentr-builtin-mappings| for builtin mappings.
+<Plug>(CommentrComment)<group>i
+	Insert comment at the place of the cursor.
 
 ==============================================================================
-Comment group bindings					*commentr_map_group*
-							*g:commentr_map_group*
+CONCEPTS						*commentr-concepts*
 
-Used internally for mapping a specific comment group to a binding. It's a
-{Dictionary} that contains item in the format of "group": "binding". See
-|commentr-comment-template| to find out more about "group". "binding" can be
-any {String} that specifies commenting with a comment from that group.
+------------------------------------------------------------------------------
+Comment groups						*commentr-comment-group*
 
-Examples: >
-	{ 'c': '', 'cm': 'm', 'cd': 'DDD' }
-<	Empty string means the default group. In this example it will be
-	translated to "", so you can comment out the current line (with a
-	comment from the default, "" group) with "<nLeader>cc". Inserting an
-	"m" comment above happens with "<nLeader>cmO"... etc. Moreover a
-	binding can be any {String}, as stated above, so for example appending
-	a "d" comment: "<nLeader>cDDDA". See |commentr-builtin-mappings| for
-	more. >
-	{ 'c': '', 'ct': 'a' }
-<	In normal mode "" comments will be attached under "<nLeader>" and "t"
-	comments will be attached under "<nLeader>a". However in this case you
-	have to keep in mind that "<nLeader>{motion}" and "<nLeader>a..."
-	mappings are colliding with each other, so please pay attention and
-	avoid situations like this.
+Comment group is a single letter [a-z]. In contexts where it can be omitted,
+it defaults to "c". It is the default group.
 
-==============================================================================
-Comment template				*commentr-comment-template*
-						*b:commentr_cache.commentstring*
+Conventionally "d" is used for documentation comments and "m" for module
+comments.
 
-It is just like 'commentstring' with some added features. Alternatives
-separated by "," just like in 'commentstring'. One-one token have the
-following format:
+------------------------------------------------------------------------------
+Comment flags					*commentr-flags*
 
-	"\=x"		Specify group to be use for current and further
-			comments. Optional. Internally, "\=d" used for
-			documentation and "\=m" for module comments.
+Controls commenting and uncommenting flags. It can be composed from the
+combination of the following letters:
 
-	"\0" "\^"	Left alignment requirements. Optional.
-	\_
+  >	Allow middle part of a three-piece comment if available. Default is to
+  	disable. See 'comments' for middle pieces.
+  >
+{group}:
+  {[a-z]}
+	Specifies a group to used for commenting and uncommenting.
 
+  {[A-Z]}
+	Specifies a group to used for commenting and uncommenting.
+
+
+If group is not specified, it defaults to the default group, that is the same
+as "c". So forcing linewise commenting with using the default group, use "C".
+
+------------------------------------------------------------------------------
+Comment string					*commentr-comment-string*
+
+It is just like 'commentstring' with some added features. It is a
+comma-separated list of commenting alternatives. Each alternative consits of:
+	[{flags}...][{lalign}]{format}[{ralign}][,,{transform}...]
+
+{flags}:
+  \=x	Group to be use for the current and further
+	comments. Internally, "\=d" used for documentation and
+	"\=m" for module comments.
+
+{lalign}:
+  \0 \^ Comment must begin on the first column.
+
+  \_	Comment must begin on the first non-whitespace column.
+
+{format}:
 	Format of comment. "%s" will be replaced with the
-	comment text. If omitted, "%s" will be appended to the end of
-	the value. Required.
+	comment text. If omitted, format will be treated like if "%s" would be
+	appended to the end of the value.
 
-	"\$"		Right alignment requirements. Optional.
-	"\_"		For comment formats without right sides (e.g "//%s"),
-			it defaults to "\$", otherwise no requirements will be
-			specified.
+{ralign}:
+  \$	Comment must end at the last column. If right part of comment string
+	is empty, it specifies a line comment.
 
-	",,"		Separate comment format from escape sequences.
-			Optional.
+  \_	Comment must end at the last non-whitespace column,
+	i.e. optional whitespace can follow it.  For formats without right
+	sides (e.g "//%s"), it defaults to "\$", otherwise no requirements
+	will be specified.
 
-	"x/{\pat}/{\sub}/"	Swap {\pat} with {\sub} when (un)commenting.
-				{\pat} and {\sub} are "\" escaped before
-				passed to the regex engine. 'noignorecase' and
-				"very nomagic" ("\C\V") are used.
-	"s/{pat}/{sub}/"	Substitute {pat} with {sub} when commenting.
-	"S/{pat}/{sub}/"	Substitute {pat} with {sub} when uncommenting.
+{transform}:
+  x/{sub1}/{sub2}/
+	Swaps {sub1} and {sub2}: Substitutes {sub1}
+	with {sub2} when commenting, and {sub2} with {sub1} when uncommenting.
+	{sub1} and {sub2} are "\" escaped and passed to the regex engine with
+	'noignorecase' and "very nomagic" flags ("\C\V").
 
-See "autoload/commentr.vim" for examples.
+  s/{pat}/{sub}/
+	Substitute {pat} with {sub} only when commenting.
+
+  S/{pat}/{sub}/
+	Substitute {pat} with {sub} only when uncommenting.
+
+Optional whitespace can be inserted between {transform} sequences. Any other
+character can be used as a separator instead of "/" in {transform}.
+
+Examples: >
+	\=d\_<<%s>>\_,,  x|>>|AA|
+<	Specifies a documentation comment that must spawn through the whole
+	line with optional whitespace surrounding it. When commenting, every
+	occurence of ">>" will be replaced with "AA". On uncommenting it will
+	be undoed.
+
+	Note that for one-way transformation use "s" or "S". It can be
+	used to build regexes to nest unnestable comments.
+
+See "autoload/commentr.vim" for more examples.
 
 ==============================================================================
 CONTRIBUTIONS					*commentr-contributions*

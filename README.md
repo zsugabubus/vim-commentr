@@ -43,12 +43,12 @@ Please see `:help commentr`.
 
 ## ToDo List
 
-- [ ] Better documentation.
+- [ ] Think out the hook system. Please help with ideas.
+- [ ] Stabilize escape sequences, escpecially for "c/cpp".
 - [ ] Improve comment ranker.
 - [ ] Test, test, test.
-- [ ] Stabilize escape sequences, escpecially for "c/cpp".
 - [ ] Add better support for dot operator.
-- [ ] Parse '&comments' (code is there just parsing remained) (aka. sexy comments, althought I don't see why it can be useful)
+- [ ] Better documentation.
 
 ###### (Oh, sh!t. No ticks? Keep calm, I removed ready tasks.)
 
