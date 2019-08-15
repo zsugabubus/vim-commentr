@@ -94,110 +94,6 @@ Example: >
 	based on syntax.
 
 ------------------------------------------------------------------------------
-Comment margin						*commentr_margin*
-							*g:commentr_margin*
-							*b:commentr_margin*
-
-Margin around comments. It can be a {Number} or a {Dictionary} that specifies
-margin to being used per "group".
-
->
-	let g:commentr_margin = 3;
-
-	     [<->]           [<->]
-	Lorem     /* ispum */     dolor
-<
-------------------------------------------------------------------------------
-Comment padding						*commentr_padding*
-							*g:commentr_padding*
-							*b:commentr_padding*
-
-Padding inside comments. It can be a {Number} or a {Dictionary} that specifies
-padding to being used per "group".
-
-Examples: >
-	let g:commentr_margin = { '': 1, 'd': 0, 'default': 5 }
-
-	            [<->]       [<->]
-	Lorem /*      ispum      */ dolor
-<
-------------------------------------------------------------------------------
-Comment alignment					*commentr_align*
-							*g:commentr_align*
-							*b:commentr_align*
-
-Specifies how to align left and right parts of the comment string in a line.
-It's a {String} in the format of "{left}{right}" where {left} and {right} is a
-specifier from |commentr_align-left| and |commentr_align-right| respectively.
-Default is "|$".
-
-Note that <Tab> charaters will be split into spaces where necessary.
-
-	{left}	meaning					*commentr_align-left*
-	0	Place left part of comment to the first column.
->
-		 1|>   struct foobar {
-		 2|>    field1,
-		 3|>      field1,
-		 4|>   }
-
-	_	Place left part of comment before the first non-white
-		character.
->
-		 1|   >struct foobar {
-		 2|    >field1,
-		 3|      >field1,
-		 4|   >}
-<
-	|	Place left part of comment to one column and as right as
-		possible.
->
-		 1|   >struct foobar {
-		 2|   > field1,
-		 3|   >   field1,
-		 4|   >}
-<
-	{right}	meaning					*commentr_align-right*
-	$	Append right part of comment to the line.
->
-		(assume trailing whites)
-
-		 1|   struct foobar {    <
-		 2|    field1,  <
-		 3|      field1, <
-		 4|   }   <
-<
-	<	Same as $, but remove trailing whites.
->
-		 1|   struct foobar {<
-		 2|    field1,<
-		 3|      field1,<
-		 4|   }<
-<
-	|	Remove trailing whites and place right part of comment to one
-		column and as left as possible. Note that lines may be longer
-		than 'textwidth'.
->
-		 1|   struct foobar {<
-		 2|    field1,       <
-		 3|      field1,     <
-		 4|   }              <
-<
-	I, >	Remove trailing whites and stretch line to 'textwidth'
-		character wide by inserting spaces. When no 'textwidth' is
-		specified, ">" is the same as "|", "I" is the same as "$".
->
-		set &textwidth=15
-
-		   |-------------|
-		  |12345678901234567890
-		 1|   struct foobar {<
-		 2|    field1,   <
-		 3|      field1, <
-		 4|   }          <
-<
-
-------------------------------------------------------------------------------
 Disable default bindings				*commentr_no_mappings*
 							*g:commentr_no_mappings*
 
@@ -292,33 +188,119 @@ Insert mode mappings:
 CONCEPTS						*commentr-concepts*
 
 ------------------------------------------------------------------------------
-Comment groups						*commentr-comment-group*
-
-Comment group is a single letter [a-z]. In contexts where it can be omitted,
-it defaults to "c". It is the default group.
-
-Conventionally "d" is used for documentation comments and "m" for module
-comments.
-
-------------------------------------------------------------------------------
 Comment flags					*commentr-flags*
+						*g:commentr_default_flags*
 
-Controls commenting and uncommenting flags. It can be composed from the
-combination of the following letters:
+Controls commenting and uncommenting options. It's one-line string that
+composed from the combination of the following letters. Every flag is
+optional. Default values come from |g:commentr_default_flags|, otherwise 0 or
+empty string will be used, based on the nature of the option.
 
-  >	Allow middle part of a three-piece comment if available. Default is to
-  	disable. See 'comments' for middle pieces.
-  >
 {group}:
   {[a-z]}
 	Specifies a group to used for commenting and uncommenting.
-
   {[A-Z]}
-	Specifies a group to used for commenting and uncommenting.
+	Specifies a group to used for commenting and uncommenting. Force
+	linewise mode.
+  *	All groups.
 
+	Comment group is a single letter [a-z]. In contexts where it can be
+	omitted, it defaults to "c". It is the default group.
 
-If group is not specified, it defaults to the default group, that is the same
-as "c". So forcing linewise commenting with using the default group, use "C".
+	Conventionally "d" is used for documentation comments and "m" for
+	module comments.
+
+  =	Force linewise mode.
+
+  +	Allow middle part of a three-piece comment if available. Default is to
+	disable. See 'comments' for middle pieces.
+
+  {left-align}{left-margin}[{left-padding}
+  {right-padding}]{right-margin}{right-align}
+	Specifies alignment, margins and paddings for left and right end of
+	comments respectively. Margins and paddings are {Number}
+
+	Text: >
+		Lorem     /*      ispum      */     dolor
+<	Margin: >
+		     [<->]                     [<->]
+<	Padding: >
+		            [<->]       [<->]
+<
+	Example: >
+		3[4]5
+<	Left margin: 3; left and right padding: 4; right margin: 5.
+
+	Alignment:				*commentr-comment-alignment*
+
+	{left}	meaning
+	0	Place left part of comment to the first column.
+>
+		 1|>   struct foobar {
+		 2|>    field1,
+		 3|>      field1,
+		 4|>   }
+
+	_	Place left part of comment before the first non-white
+		character.
+>
+		 1|   >struct foobar {
+		 2|    >field1,
+		 3|      >field1,
+		 4|   >}
+<
+	|	Place left part of comment to one column and as right as
+		possible.
+>
+		 1|   >struct foobar {
+		 2|   > field1,
+		 3|   >   field1,
+		 4|   >}
+<
+	{right}	meaning
+	$	Append right part of comment to the line.
+>
+		(assume trailing whites)
+
+		 1|   struct foobar {    <
+		 2|    field1,  <
+		 3|      field1, <
+		 4|   }   <
+<
+	<	Same as $, but remove trailing whites.
+>
+		 1|   struct foobar {<
+		 2|    field1,<
+		 3|      field1,<
+		 4|   }<
+<
+	|	Remove trailing whites and place right part of comment to one
+		column and as left as possible. Note that lines may be longer
+		than 'textwidth'.
+>
+		 1|   struct foobar {<
+		 2|    field1,       <
+		 3|      field1,     <
+		 4|   }              <
+<
+	I, >	Remove trailing whites and stretch line to 'textwidth'
+		character wide by inserting spaces. When no 'textwidth' is
+		specified, ">" is the same as "|", "I" is the same as "$".
+>
+		set &textwidth=15
+
+		   |-------------|
+		  |12345678901234567890
+		 1|   struct foobar {<
+		 2|    field1,   <
+		 3|      field1, <
+		 4|   }          <
+<
+	Example: >
+		|$
+<	The most natural way.
+
+	Note that <Tab> charaters will be split into spaces where necessary.
 
 ------------------------------------------------------------------------------
 Comment string					*commentr-comment-string*

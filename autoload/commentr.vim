@@ -796,7 +796,7 @@ endfunction " 4}}}
 function! g:commentr#DoComment(...) abort range
   " {{{4
   let flags = get(a:, 1, '')
-  let env = s:getEnviron([g:commentr_flags, flags])
+  let env = s:getEnviron([g:commentr_default_flags, flags])
 
   silent! call repeat#set(':Comment ' . escape(flags, '\') . '\<CR>')
 
@@ -1133,7 +1133,7 @@ function! g:commentr#DoUncomment(...) abort range
   " {{{4
   let winview = winsaveview()
   let flags = get(a:, 1, '')
-  let env = s:getEnviron([g:commentr_flags, flags])
+  let env = s:getEnviron([g:commentr_default_flags, flags])
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
