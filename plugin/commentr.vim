@@ -35,7 +35,7 @@ for [s:name, s:def] in [
 \   ['commentr_no_mappings', 0],
 \   ['commentr_commentstrings', {}],
 \   ['commentr_default_flags', '*|0[1]0$'],
-\   ['commentr_bindings', { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+' }]
+\   ['commentr_bindings', { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+[' }]
 \ ]
   if !has_key(g:, s:name)
     let g:{s:name} = s:def

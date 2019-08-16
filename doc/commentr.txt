@@ -127,7 +127,6 @@ Examples: >
 	{ 'c': '', 'cm': 'm', 'cd': 'DDD' }
 	{ 'c': '', 'ct': 'a' }
 <
-
 List of plugin keys:				*commentr-builtin-keys*
 
 <Plug>(CommentrComment)
@@ -224,13 +223,14 @@ empty string will be used, based on the nature of the option.
 
   =	Force linewise mode.
 
-  +	Allow middle part of a three-piece comment if available. Default is to
-	disable. See 'comments' for middle pieces.
-
-  {left-align}{left-margin}[{left-padding}
-  {right-padding}]{right-margin}{right-align}
+  +{left-align}{left-margin}[{left-padding}
+  {right-padding}]{right-margin}{right-align}+
 	Specifies alignment, margins and paddings for left and right end of
 	comments respectively. Margins and paddings are {Number}
+
+	"+" signs allow middle parts of a three-piece comment on the left and
+	right sides. Disallowed by default. See 'comments' for left middle
+	pieces.
 
 	Text: >
 		Lorem     /*      ispum      */     dolor
@@ -334,7 +334,24 @@ comma-separated list of commenting alternatives. Each alternative consits of:
 {format}:
 	Format of comment. "%s" will be replaced with the
 	comment text. If omitted, format will be treated like if "%s" would be
-	appended to the end of the value.
+	appended to the end of {format}.  Example: >
+		//%s
+		//
+<	means the same format.
+
+	Escape sequences:
+	  \n	Line break.
+		Note that one-one additional line break needed on both sides
+		to separate custom text from real comment start and end
+		markers.
+
+	Example: >
+		/*\nStart:\nSecond line\nThird line%sLast line\n*/
+<		/*Start:
+		Second line
+		Third line
+		...
+		Last line*/
 
 {ralign}:
   \$	Comment must end at the last column. If right part of comment string
