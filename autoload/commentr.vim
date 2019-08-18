@@ -2,7 +2,6 @@
 " AUTHOR: zsugabubus
 
 " TODO: Stabilize escape sequences, escpecially for "c/cpp".
-" TODO: Think out a hook system, maybe.
 " TODO: Improve comment ranker.
 " TODO: Test, test, test.
 
@@ -320,8 +319,9 @@ let s:sskip_string = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "stri
 " SECTION: Local functions {{{2
 function! s:getEnviron(flags) abort
   let env = {}
+  let flaglist = type(a:flags) ==# v:t_list ? a:flags : [a:flags]
 
-  for flags in type(a:flags) ==# v:t_list ? a:flags : [a:flags]
+  for flags in flaglist
     for [name, pat, type] in [
     \   ['group',          '^([a-zA-Z*])',    v:t_string],
     \   ['force_linewise', '^[a-zA-Z*]?\=',   v:t_bool],
@@ -334,17 +334,23 @@ function! s:getEnviron(flags) abort
     \   ['rmargin',        '](\d+)',          v:t_number],
     \   ['ralign',         ']\d*([$<>I|])',   v:t_string],
     \   ['allow_rmstr',    ']\d*.\+',         v:t_bool],
+    \   ['hooks',          '\@([a-zA-Z0-9]*)',  v:t_list],
     \ ]
       let val = matchlist(flags, '\v\C' . pat)
       if !empty(val)
         let env[name] =
           \ type ==# v:t_bool ? 1 :
           \ type ==# v:t_number ? str2nr(val[1], 10) :
+          \ type ==# v:t_list ? add(get(env, name, []), val[1]) :
           \ val[1]
       elseif !has_key(env, name)
-        let env[name] = type ==# v:t_bool || type == v:t_number ? 0 : ''
+        let env[name] = type ==# v:t_bool || type == v:t_number ? 0 :
+                      \ type == v:t_list ? [] :
+                      \ ''
       endif
     endfor
+
+    call extend(flaglist, map(copy(env.hooks), {_, hook-> string(call(hook, []))}))
   endfor
 
   let env.group = tolower(env.group)
