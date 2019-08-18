@@ -96,7 +96,14 @@ let s:ft2cms = [
 \     '::%s'
 \   ],
 \   [ ' c ',
-\     '/*%s*/,,x:/*:\*:x:*/:*\:,\=d/**%s*/'
+\     '/*%s*/,,
+\      s_#<{(|\(\d\*\)_\="#<{(|".(submatch(1)+1)_
+\      S_#<{(|\(\d\*\)_\=submatch(1)!=#""?"#<{(|".(submatch(1)>#1?submatch(1)-1:""):"/*"_
+\      s_\(\d\*\)|)}>#_\=(submatch(1)+1)."|)}>#"_
+\      S_\(\d\*\)|)}>#_\=submatch(1)!=#""?(submatch(1)>#1?submatch(1)-1:"")."|)}>#":"*/"_
+\      s_/*_#<{(|_
+\      s_*/_|)}>#_
+\      ,\=d/**%s*/'
 \   ],
 \   [ ' caos cterm form foxpro gams sicad snobol4 ',
 \     '*%s'
@@ -654,14 +661,14 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
     let comment.unescss = []
 
     while !empty(escs)
-      let [_, op, sep, pat, sub, escs; _] = matchlist(escs, '\v\C^\s*(.)(.)(.{-})\2(.{-})\2(.*)$')
+      let [_, op, sep, pat, sub, escs; _] = matchlist(escs, '\v\C^\s*(\S)(.)(.{-})\2(.{-})\2\s*(\S.*|)$')
       if op ==# 's'
-        call add(comment.escss, [pat, sub])
+        call add(comment.escss, ['\V\C' . pat, sub])
       elseif op ==# 'S'
-        call add(comment.unescss, [pat, sub])
+        call add(comment.unescss, ['\V\C' . pat, sub])
       elseif op ==# 'x'
-        call add(comment.escss,      ['\C\V' . escape(pat, '\'), escape(sub, '\&')])
-        call insert(comment.unescss, ['\C\V' . escape(sub, '\'), escape(pat, '\&')])
+        call add(comment.escss,      ['\V\C' . escape(pat, '\'), escape(sub, '\&')])
+        call insert(comment.unescss, ['\V\C' . escape(sub, '\'), escape(pat, '\&')])
       else
         throw "commentr: unknown escape operator: '" . op . "'"
       endif
