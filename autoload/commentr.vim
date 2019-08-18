@@ -1048,7 +1048,7 @@ function! g:commentr#DoComment(...) abort range
           if min_width_lwhite ==# width
             " Comment is inserted at character border.
             let mline = strpart(mline, len)
-          else
+          elseif width ># 0
             " Need to break tabs apart.
             "          /min_width_lwhite
             "         V
@@ -1057,6 +1057,8 @@ function! g:commentr#DoComment(...) abort range
 
             let lline .= repeat(' ', min_width_lwhite - width)
             let mline = repeat(' ', prev_width - min_width_lwhite) . strpart(mline, len)
+          else
+            let lline = min_lwhite
           endif
 
         endif
@@ -1122,7 +1124,9 @@ function! g:commentr#DoComment(...) abort range
       let max_width = new_line_width
     endif
 
-    call setline(lnum, new_line)
+    if new_line !=# line
+      call setline(lnum, new_line)
+    endif
   endfor
 
   if will_com_after
@@ -1176,6 +1180,7 @@ endfunction " 4}}}
 
 function! g:commentr#OpUncomment(mode) abort
   " {{{4
+
   let g:commentr_mode_override = a:mode
   call g:commentr#DoUncomment(g:commentr_op_group)
 endfunction " 4}}}
@@ -1239,17 +1244,17 @@ function! g:commentr#DoUncomment(...) abort range
 
       if has_key(comment, 'nextstart')
         for Comparator in [
-        \ {-> !exists("nextcomment")},
+        \ !exists('nextcomment'),
         \ {-> s:poscmp(nextcomment.nextstart, comment.nextstart)},
-        \ {-> len(nextcomment.header)     - len(comment.header)},
-        \ {-> len(trim(nextcomment.lstr)) - len(trim(comment.lstr))},
-        \ {-> len(trim(nextcomment.rstr)) - len(trim(comment.rstr))}
+        \ {-> len(comment.header) - len(nextcomment.header)},
+        \ {-> len(trim(comment.lstr)) - len(trim(nextcomment.lstr))},
+        \ {-> len(trim(comment.rstr)) - len(trim(nextcomment.rstr))}
         \ ]
-          let cmp = Comparator()
+          let cmp = type(Comparator) ==# v:t_func ? Comparator() : Comparator
           if cmp ==# 0
             continue
           elseif cmp ># 0
-            let nextcomment = comment
+            let l:nextcomment = comment
           endif
 
           break
@@ -1324,11 +1329,13 @@ function! g:commentr#DoUncomment(...) abort range
 
       let mline = comment.unescape(mline)
 
-      let line = lline . mline . rline
-      let start_rwhite = matchstrpos(line, '\m\C\s*$')[1]
-      let line = strpart(line, 0, start_rwhite)
+      let new_line = lline . mline . rline
+      let start_rwhite = matchstrpos(new_line, '\m\C\s*$')[1]
+      let new_line = strpart(new_line, 0, start_rwhite)
 
-      call setline(lnum, line)
+      if new_line !=# line
+        call setline(lnum, new_line)
+      endif
     endfor
 
     let Trimmer = {_, line -> trim(line)}

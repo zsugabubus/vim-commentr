@@ -17,16 +17,16 @@ set cpo&vim
 " SECTION: Initialization {{{1
 " SECTION: Commands {{{2
 command -range -nargs=? Comment if mode() ==# 'n'
-  \ |   <line1>,<line2>call commentr#DoComment(<f-args>)
+  \ |   keepjumps <line1>,<line2>call commentr#DoComment(<f-args>)
   \ | else
-  \ |   call commentr#DoComment(<f-args>)
+  \ |   keepjumps call commentr#DoComment(<f-args>)
   \ | endif
-command Uncomment call commentr#DoUncomment('*')
-command UncommentLines call commentr#DoUncomment('!')
+command Uncomment keepjumps call commentr#DoUncomment('*')
+command UncommentLines keepjumps call commentr#DoUncomment('!')
 command -range -nargs=? ToggleComment if mode() ==# 'n'
-  \ |   <line1>,<line2>call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
+  \ |   keepjumps <line1>,<line2>call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
   \ | else
-  \ |   call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
+  \ |   keepjumps call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
   \ | endif
 
 " SECTION: Variables {{{2
