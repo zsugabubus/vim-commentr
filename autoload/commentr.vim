@@ -429,6 +429,7 @@ function! s:getFiletypeStrings(ft) abort
   let found = 0
   let spacedft = ' ' . a:ft . ' '
   let commentstring = ''
+  let comments = ''
   let cbstack = []
 
   for [langs, cms] in s:ft2cms
@@ -447,25 +448,27 @@ function! s:getFiletypeStrings(ft) abort
     let commentstring = Cb(commentstring, ft)
   endfor
 
-  " Filetype not in internal cache.
+  " Get missing fields from Vim.
+  if empty(comments) ||
+  \  empty(commentstring)
+    if a:ft !=# &ft
+      let oldft = &ft
+      exe 'set ft=' . a:ft
+      let found = found || b:did_ftplugin
+    else
+      let found = 1
+    endif
 
-  if a:ft !=# &ft
-    let oldft = &ft
-    exe 'set ft=' . a:ft
-    let found = found || b:did_ftplugin
-  else
-    let found = 1
-  endif
+    if empty(comments)
+      let comments = &comments
+    endif
+    if empty(commentstring)
+      let commentstring = &commentstring
+    endif
 
-  if !exists('comments')
-    let comments = &comments
-  endif
-  if empty('commentstring')
-    let commentstring = &commentstring
-  endif
-
-  if exists('oldft')
-    exe 'set ft=' . oldft
+    if exists('oldft')
+      exe 'set ft=' . oldft
+    endif
   endif
 
   return [found, commentstring, comments]
