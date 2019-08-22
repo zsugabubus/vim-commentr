@@ -13,20 +13,20 @@ set cpo&vim
 let s:html_comment = '<!--%s-->,,x/&/&amp;/x/--/&#45;&#45;/'
 let s:ft2cms = [
 \   [ ' aap ampl ansible apache apachestyle awk bash bc cfg cl cmake
-      \ conkyrc crontab cucumber cython dakota debcontrol debsources
-      \ desktop dhcpd diff dockerfile ebuild ecd eclass elixir elmfilt
-      \ ember-script esmtprc expect exports fancy fgl fstab fvwm gdb
-      \ gentoo-conf-d gentoo-env-d gentoo-init-d gentoo-make-conf
-      \ gentoo-package-keywords gentoo-package-mask gentoo-package-use
-      \ gitcommit gitignore gitrebase gnuplot gtkrc hb hog hostsaccess
-      \ hxml ia64 icon inittab jproperties ldif lilo lout lss lynx maple
-      \ meson mips mirah mush neomuttrc nginx nimrod nsis ntp ora
-      \ paludis-use-conf pcap perl pine po praat privoxy ps1 psf ptcap
-      \ puppet pyrex python r radiance ratpoison remind renpy resolv rib
-      \ rmd robot robots rspec ruby scons sdc sed sh shader_test sls sm
-      \ snippets snnsnet snnspat snnsres spec squid sshconfig sshdconfig
-      \ tcl tf tidy tli tmux toml tsscl ttl tup upstart vgrindefs vrml
-      \ wget wml xmath yaml zsh ',
+      \ conkyrc conf crontab cucumber cython dakota debcontrol
+      \ debsources desktop dhcpd diff dockerfile ebuild ecd eclass
+      \ elixir elmfilt ember-script esmtprc expect exports fancy fgl
+      \ fstab fvwm gdb gentoo-conf-d gentoo-env-d gentoo-init-d
+      \ gentoo-make-conf gentoo-package-keywords gentoo-package-mask
+      \ gentoo-package-use gitcommit gitignore gitrebase gnuplot gtkrc
+      \ hb hog hostsaccess hxml ia64 icon inittab jproperties ldif lilo
+      \ lout lss lynx maple meson mips mirah mush neomuttrc nginx nimrod
+      \ nsis ntp ora paludis-use-conf pcap perl pine po praat privoxy
+      \ ps1 psf ptcap puppet pyrex python r radiance ratpoison remind
+      \ renpy resolv rib rmd robot robots rspec ruby scons sdc sed sh
+      \ shader_test sls sm snippets snnsnet snnspat snnsres spec squid
+      \ sshconfig sshdconfig tcl tf tidy tli tmux toml tsscl ttl tup
+      \ upstart vgrindefs vrml wget wml xmath yaml zsh ',
 \     ' #%s'
 \   ],
 \   [ ' abc bbx bst ist lilypond lprolog lytex map pdf postscr ppd sile
