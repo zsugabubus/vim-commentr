@@ -6,11 +6,6 @@ if exists('g:loaded_commentr')
   finish
 endif
 
-if v:version < 700
-  echoerr 'commentr: plugin requires vim >= 7'
-  finish
-endif
-
 let s:save_cpo = &cpo
 set cpo&vim
 
@@ -30,26 +25,19 @@ command -range -nargs=? ToggleComment if mode() ==# 'n'
   \ | endif
 
 " SECTION: Variables {{{2
-for [s:name, s:def] in [
-\   ['commentr_ft_noguess', { 'c': ['cpp'] }],
-\   ['commentr_no_mappings', 0],
-\   ['commentr_commentstrings', {}],
-\   ['commentr_default_flags', '*|0[1]0$'],
-\   ['commentr_bindings', { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+[' }]
-\ ]
-  if !has_key(g:, s:name)
-    let g:{s:name} = s:def
+if !has_key(g:, 'commentr_bindings')
+  let g:commentr_bindings = { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+[' }
+endif
+if !empty(g:commentr_bindings)
+  if !hasmapto('<Plug>(CommentrComment)')
+    map <silent> <Leader> <Plug>(CommentrComment)
   endif
-endfor
-unlet s:name s:def
+  if !hasmapto('<Plug>(CommentrUncomment)')
+    map <silent> <Leader>cu <Plug>(CommentrUncomment)
+  endif
 
-" SECTION: Keybindings {{{2
-map <silent> <Leader> <Plug>(CommentrComment)
-map <silent> <Leader>cu <Plug>(CommentrUncomment)
-
-if !g:commentr_no_mappings
   for [s:binding, s:flags] in items(g:commentr_bindings)
-    let s:flags = escape(s:flags, "\\'")
+    let s:flags = escape(s:flags, '\"')
     let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'
 
     exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'

@@ -1,7 +1,6 @@
 " LICENSE: GPLv3 or later
 " AUTHOR: zsugabubus
 
-" TODO: Stabilize escape sequences, escpecially for "c/cpp".
 " TODO: Improve comment ranker.
 " TODO: Test, test, test.
 
@@ -9,367 +8,107 @@
 let s:save_cpo = &cpo
 set cpo&vim
 
-" SECTION: Variables {{{1
-let s:html_comment = '<!--%s-->,,x/&/&amp;/x/--/&#45;&#45;/'
-let s:ft2cms = [
-\   [ ' aap ampl ansible apache apachestyle awk bash bc cfg cl cmake
-      \ conkyrc conf crontab cucumber cython dakota debcontrol
-      \ debsources desktop dhcpd diff dockerfile ebuild ecd eclass
-      \ elixir elmfilt ember-script esmtprc expect exports fancy fgl
-      \ fstab fvwm gdb gentoo-conf-d gentoo-env-d gentoo-init-d
-      \ gentoo-make-conf gentoo-package-keywords gentoo-package-mask
-      \ gentoo-package-use gitcommit gitignore gitrebase gnuplot gtkrc
-      \ hb hog hostsaccess hxml ia64 icon inittab jproperties ldif lilo
-      \ lout lss lynx maple meson mips mirah mush neomuttrc nginx nimrod
-      \ nsis ntp ora paludis-use-conf pcap perl pine po praat privoxy
-      \ ps1 psf ptcap puppet pyrex python r radiance ratpoison remind
-      \ renpy resolv rib rmd robot robots rspec ruby scons sdc sed sh
-      \ shader_test sls sm snippets snnsnet snnspat snnsres spec squid
-      \ sshconfig sshdconfig tcl tf tidy tli tmux toml tsscl ttl tup
-      \ upstart vgrindefs vrml wget wml xmath yaml zsh ',
-\     ' #%s'
-\   ],
-\   [ ' abc bbx bst ist lilypond lprolog lytex map pdf postscr ppd sile
-      \ slang slrnrc tex texmf txt2tags virata ',
-\     '%%s'
-\   ],
-\   [ ' acedb actionscript asy cg ch clean clipper cpp cs cuda d dot
-      \ dylan fx glsl go groovy h haxe hercules hyphy idl ishd java
-      \ javacc javascript javascript.jquery kscript lpc mel named objc
-      \ objcpp objj ooc pccts php pike pilrc plm pov processing rc sass
-      \ scss slice stan stp supercollider swift systemverilog tads teak
-      \ tsalt typescript uc vala vera verilog verilog_systemverilog ',
-\     '//%s,/*%s*/,\=d///%s,/**%s*/',
-\   ],
-\   [ ' ada ahdl asn cabal csp eiffel gdmo hive lace mib occam sa sather
-      \ sql sqlforms sqlj vhdl ',
-\     '--%s'
-\   ],
-\   [ ' amiga armasm asm68k asterisk autoit bindzone clojure def dns
-      \ dosini dracula dsl gitconfig idlang iss jess kix llvm masm monk
-      \ nagios nasm ncf newlisp omnimark pic povini rebol registry scsh
-      \ skill smith tags tasm winbatch wvdial z8a ',
-\     ';%s'
-\   ],
-\   [ ' aml natural vsejcl ',
-\     '/*%s'
-\   ],
-\   [ ' apdl fortran incar inform molpro poscar rgb sqr uil vasp
-      \ xdefaults xpm2 ',
-\     '!%s'
-\   ],
-\   [ ' applescript ',
-\     '--%s,(*%s*)'
-\   ],
-\   [ ' asciidoc bib calibre openroad ox pfmain scilab specman xkb ',
-\     '//%s'
-\   ],
-\   [ ' asm samba ',
-\     ';%s,#%s'
-\   ],
-\   [ ' asp ',
-\     '%%s,%*%s*%'
-\   ],
-\   [ ' aspvbs ',
-\     "'%s,<!--%s-->"
-\   ],
-\   [ ' atlas ',
-\     'C %s$'
-\   ],
-\   [ ' augeas coq jgraph lotos mma moduala. modula2 modula3 ocaml omlet
-      \ sml ',
-\     '(*%s*)'
-\   ],
-\   [ ' autohotkey ',
-\     ';%s,/*%s*/'
-\   ],
-\   [ ' ave elf lscript vb ',
-\     "'%s"
-\   ],
-\   [ ' basic ',
-\     "'%s,REM %s"
-\   ],
-\   [ ' blade laravel ',
-\     '{{--%s--}}'
-\   ],
-\   [ ' btm ',
-\     '::%s'
-\   ],
-\   [ ' c ',
-\     '/*%s*/,,
-\      s_#<{(|\(\d\*\)_\="#<{(|".(submatch(1)+1)_
-\      S_#<{(|\(\d\*\)_\=submatch(1)!=#""?"#<{(|".(submatch(1)>#1?submatch(1)-1:""):"/*"_
-\      s_\(\d\*\)|)}>#_\=(submatch(1)+1)."|)}>#"_
-\      S_\(\d\*\)|)}>#_\=submatch(1)!=#""?(submatch(1)>#1?submatch(1)-1:"")."|)}>#":"*/"_
-\      s_/*_#<{(|_
-\      s_*/_|)}>#_
-\      ,\=d/**%s*/'
-\   ],
-\   [ ' caos cterm form foxpro gams sicad snobol4 ',
-\     '*%s'
-\   ],
-\   [ ' catalog sgmldecl ',
-\     '--%s--'
-\   ],
-\   [ ' cf ',
-\     '<!---%s--->'
-\   ],
-\   [ ' coffee ',
-\     '#%s,###%s###'
-\   ],
-\   [ ' context ',
-\     '%%s,--%s'
-\   ],
-\   [ ' css ',
-\     '/*%s*/'
-\   ],
-\   [ ' cvs ',
-\     'CVS:%s'
-\   ],
-\   [ ' dcl ',
-\     '$!%s'
-\   ],
-\   [ ' django ',
-\     s:html_comment . '{#%s#}'
-\   ],
-\   [ ' docbk html markdown pandoc sgmllnx wikipedia ',
-\     s:html_comment
-\   ],
-\   [ ' dosbatch ',
-\     'REM %s,::%s'
-\   ],
-\   [ ' dtml ',
-\     '<dtml-comment>%s</dtml-comment>'
-\   ],
-\   [ ' elm ',
-\     '--%s,{--%s--}'
-\   ],
-\   [ ' emblem ',
-\     '/%s'
-\   ],
-\   [ ' erlang ',
-\     '%%s,%%%s'
-\   ],
-\   [ ' eruby ',
-\     '<%#%s%>,' . s:html_comment
-\   ],
-\   [ ' factor ',
-\     '! %s,!# %s'
-\   ],
-\   [ ' focexec ',
-\     '-*%s'
-\   ],
-\   [ ' fsharp ',
-\     '//%s,(*%s*)'
-\   ],
-\   [ ' geek ',
-\     'GEEK_COMMENT:'
-\   ],
-\   [ ' genshi htmldjango ',
-\     s:html_comment . ',{#%s#}'
-\   ],
-\   [ ' gsp ',
-\     '<%--%s--%>,' . s:html_comment
-\   ],
-\   [ ' haml ',
-\     '-#%s,/%s'
-\   ],
-\   [ ' handlebars ',
-\     '{{!--%s--}}'
-\   ],
-\   [ ' haskell idris ',
-\     '--%s,{-%s-}'
-\   ],
-\   [ ' htmlcheetah mako webmacro ',
-\     '##%s'
-\   ],
-\   [ ' htmlos ',
-\     '#%s/#'
-\   ],
-\   [ ' jinja ',
-\     s:html_comment . ',{#%s#}'
-\   ],
-\   [ ' jsp ',
-\     '<%--%s--%>'
-\   ],
-\   [ ' julia ',
-\     '#%s,#=%s=#'
-\   ],
-\   [ ' less ',
-\     '/*%s*/'
-\   ],
-\   [ ' lhaskell ',
-\     '>-- %s,>{-%s-}'
-\   ],
-\   [ ' liquid ',
-\     '{% comment %}%s{% endcomment %}'
-\   ],
-\   [ ' list racket scheme ss ',
-\     ';%s,#|%s|#'
-\   ],
-\   [ ' lua ',
-\     '--%s,--[[%s]]'
-\   ],
-\   [ ' m4 ',
-\     'dnl %s'
-\   ],
-\   [ ' man ',
-\     '."%s'
-\   ],
-\   [ ' mason ',
-\     '<% #%s%>'
-\   ],
-\   [ ' master nastran sinda spice tak trasys ',
-\     '$%s'
-\   ],
-\   [ ' matlab ',
-\     '%%s,%{%s%}'
-\   ],
-\   [ ' minizinc ',
-\     '% %s,/*%s*/'
-\   ],
-\   [ ' mkd ',
-\     '\<!---%s-->'
-\   ],
-\   [ ' model ',
-\     '$%s$'
-\   ],
-\   [ ' mustache ',
-\     '{{!%s}}'
-\   ],
-\   [ ' nroff ',
-\     '\"%s'
-\   ],
-\   [ ' octave ',
-\     '%%s,#%s',
-\   ],
-\   [ ' opl ',
-\     'REM %s'
-\   ],
-\   [ ' pascal ',
-\     '//%s,{%s},(*%s*)'
-\   ],
-\   [ ' patran ',
-\     '$%s,/*%s*/'
-\   ],
-\   [ ' plsql ',
-\     '--%s,/*%s*/'
-\   ],
-\   [ ' ppwiz ',
-\     ';;%s'
-\   ],
-\   [ ' prolog ',
-\     '% %s,%! %s,/*%s*/,td:/**%s*/'
-\   ],
-\   [ ' pug ',
-\     '//-%s,//%s'
-\   ],
-\   [ ' rust ',
-\     '//%s,/*%s*/,\=d///%s,/**%s*/,\=m//!%s,/*!%s*/'
-\   ],
-\   [ ' scala ',
-\     '//%s,/*%s*/,\=d///%s,/**%s*/'
-\   ],
-\   [ ' simula ',
-\     '%%s,--%s'
-\   ],
-\   [ ' slim ',
-\     '/%s/!'
-\   ],
-\   [ ' smarty ',
-\     '{*%s*}'
-\   ],
-\   [ ' smil ',
-\     '\<!%s>'
-\   ],
-\   [ ' spectre ',
-\     '//%s,*%s'
-\   ],
-\   [ ' spin ',
-\     "'%s,{%s}"
-\   ],
-\   [ ' st ',
-\     '"%s'
-\   ],
-\   [ ' terraform ',
-\     '#%s,(*%s*)'
-\   ],
-\   [ ' texinfo ',
-\     '@c %s'
-\   ],
-\   [ ' tssgm ',
-\     "\\^comment = '%s'\\$"
-\   ],
-\   [ ' twig ',
-\     '{#%s#}'
-\   ],
-\   [ ' velocity ',
-\     '##%s,#*%s*#'
-\   ],
-\   [ ' vim ',
-\     ' "%s,,x:":\":'
-\   ],
-\   [ ' xquery ',
-\     '(:%s:)'
-\   ],
-\ ]
-unlet s:html_comment
+" SECTION: Lazy Initialization {{{1
+let s:html_commentstrng = '<!--%s-->,,x/&/&amp;/x/--/&#45;&#45;/'
+let s:c_commentstring =
+    \     '/*%s*/,,
+    \      s_#<{(|\(\d\*\)_\="#<{(|".(submatch(1)+1)_
+    \      S_#<{(|\(\d\*\)_\=submatch(1)!=#""?"#<{(|".(submatch(1)>#1?submatch(1)-1:""):"/*"_
+    \      s_\(\d\*\)|)}>#_\=(submatch(1)+1)."|)}>#"_
+    \      S_\(\d\*\)|)}>#_\=submatch(1)!=#""?(submatch(1)>#1?submatch(1)-1:"")."|)}>#":"*/"_
+    \      s_/*_#<{(|_
+    \      s_*/_|)}>#_
+    \      ,\=d/**%s*/'
 
-for [s:lang, s:cms] in items(g:commentr_commentstrings)
-  call insert(s:ft2cms, [' ' . s:lang . ' ', s:cms])
-endfor
-unlet! s:lang s:cms
+function! s:setCommentstring(cms) abort
+  if !has_key(b:, 'commentr_commentstring'
+    let b:commentr_commentstring = cms
+  endif
+endfunction
 
-let s:sskip_string = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'
+augroup commentr
+  au!
+  au FileType cpp
+    \ let b:commentr_ft_noguess = ['c']
+
+  au FileType dosbatch
+    \ let b:commentr_commentstring = 'REM %s,::%s'
+  au FileType html,markdown
+    \ let b:commentr_commentstring = s:html_commentstrng
+  au FileType haskell,idris
+    \ let b:commentr_commentstring = '--%s,{-%s-}'
+  au FileType django
+    \ let b:commentr_commentstring =  s:html_commentstrng . '{#%s#}'
+  au FileType eruby
+    \ let b:commentr_commentstring = '<%#%s%>,' . s:html_commentstrng
+  au FileType gsp
+    \ let b:commentr_commentstring = '<%--%s--%>,' . s:html_commentstrng
+  au FileType jinja
+    \ let b:commentr_commentstring = s:html_commentstrng . ',{#%s#}'
+  au FileType julia
+    \ let b:commentr_commentstring = '#%s,#=%s=#'
+  au FileType lhaskell
+    \ let b:commentr_commentstring = '>-- %s,>{-%s-}'
+  au FileType lua
+    \ let b:commentr_commentstring = '--%s,--[[%s]]'
+  au FileType pug
+    \ let b:commentr_commentstring = '//-%s,//%s'
+  au FileType rust
+    \ let b:commentr_commentstring = '//%s,/*%s*/,\=d///%s,/**%s*/,\=m//!%s,/*!%s*/'
+  au FileType scala
+    \ let b:commentr_commentstring = '//%s,/*%s*/,\=d///%s,/**%s*/'
+  au FileType vim
+    \ let b:commentr_commentstring = '"%s,,x:":\":'
+  au FileType c
+    \ let b:commentr_commentstring = s:c_commentstring
+  au FileType cpp
+    \ let b:commentr_commentstring = '//%s,' . s:c_commentstring
+augroup END
 
 " SECTION: Functions {{{1
 " SECTION: Local functions {{{2
-function! s:getEnviron(flags) abort
-  let env = {}
+function! s:getConfig(flags) abort
+  let cfg = {}
   let flaglist = type(a:flags) ==# v:t_list ? a:flags : [a:flags]
 
   for flags in flaglist
-    for [name, pat, type] in [
-    \   ['group',          '^([a-zA-Z*])',    v:t_string],
-    \   ['force_linewise', '^[a-zA-Z*]?\=',   v:t_bool],
-    \   ['force_linewise', '^[A-Z]',          v:t_bool],
-    \   ['allow_lmstr',    '\+.\d*[',         v:t_bool],
-    \   ['lalign',         '([0_|])\d*[',     v:t_string],
-    \   ['lmargin',        '(\d+)[',          v:t_number],
-    \   ['lpadding',       '[(\d+)',          v:t_number],
-    \   ['rpadding',       '(\d+)]',          v:t_number],
-    \   ['rmargin',        '](\d+)',          v:t_number],
-    \   ['ralign',         ']\d*([$<>I|])',   v:t_string],
-    \   ['allow_rmstr',    ']\d*.\+',         v:t_bool],
-    \   ['hooks',          '\@([a-zA-Z0-9]*)',  v:t_list],
+    for [name, pat, def] in [
+    \   ['group',          '^([a-zA-Z*])',     '*'],
+    \   ['force_linewise', '^[a-zA-Z*]?\=',    0],
+    \   ['force_linewise', '^[A-Z]',           0],
+    \   ['allow_lmstr',    '\+.\d*[',          0],
+    \   ['lalign',         '([0_|])\d*[',      '|'],
+    \   ['lmargin',        '(\d+)[',           3],
+    \   ['lpadding',       '[(\d+)',           1],
+    \   ['rpadding',       '(\d+)]',           1],
+    \   ['rmargin',        '](\d+)',           1],
+    \   ['ralign',         ']\d*([$<>I|])',    '$'],
+    \   ['allow_rmstr',    ']\d*.\+',          0],
+    \   ['hooks',          '\@([a-zA-Z0-9]*)', []],
     \ ]
       let val = matchlist(flags, '\v\C' . pat)
       if !empty(val)
-        let env[name] =
-          \ type ==# v:t_bool ? 1 :
-          \ type ==# v:t_number ? str2nr(val[1], 10) :
-          \ type ==# v:t_list ? add(get(env, name, []), val[1]) :
+        let cfg[name] =
+          \ type(def) ==# v:t_number ? (val[1] =~# '\m^\d\+$' ? str2nr(val[1], 10) : 1) :
+          \ type(def) ==# v:t_list ? add(get(cfg, name, []), val[1]) :
           \ val[1]
-      elseif !has_key(env, name)
-        let env[name] = type ==# v:t_bool || type == v:t_number ? 0 :
-                      \ type == v:t_list ? [] :
-                      \ ''
+      elseif !has_key(cfg, name)
+        let cfg[name] = def
       endif
     endfor
 
-    call extend(flaglist, map(copy(env.hooks), {_, hook-> string(call(hook, []))}))
+    call extend(flaglist, map(copy(cfg.hooks), {_, hook-> string(call(hook, []))}))
   endfor
 
-  let env.group = tolower(env.group)
+  let cfg.group = tolower(cfg.group)
   " 'c' is a virtual comment group, stands for default.
-  if env.group ==# 'c'
-    let env.group = ''
+  if cfg.group ==# 'c'
+    let cfg.group = ''
   endif
-
-  let env.comments = s:getComments(env)
-  return env
+  return cfg
 endfunction
 
+let s:sskip_string = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'
 function! s:searchpos(pattern, stopline) abort
   " {{{3
   let flags = 'cWz'
@@ -396,111 +135,133 @@ function! s:isCommentedAt(lnum, col) abort
   return synIDattr(synIDtrans(synID(a:lnum, a:col, 1)), "name") =~? 'comment'
 endfunction
 
-" Purpose: Guess filetype under cursor.
-function! s:guessFiletypes() abort
+" Purpose: Get suitable comments for config.
+function! s:getComments(flags) abort
   " {{{3
-  let ftstack = []
-  let noguess = get(g:commentr_ft_noguess, &ft, [])
-  if type(noguess) ==# v:t_list || noguess !=# '*'
-    let synstack = reverse(synstack(line('.'), col('.')))
+  if !has_key(b:, 'commentr_cache')
+    let b:commentr_cache = []
+  endif
 
-    for synitem in synstack
-      let synft = s:getFiletypeFromSyn(synitem)
-      if empty(synft) || get(ftstack, 0, '') ==# synft
+  let synstack = synstack(line('.'), col('.'))
+  let synstack = map(synstack, {_,item-> synIDattr(item, "name")})
+  let tokenlist = map(synstack, {_,synname-> map(split(synname, '\m\C\ze[A-Z]'), 'tolower(v:val)')})
+  let tokenlist = add(reverse(tokenlist), [&ft])
+  let noluck = copy(get(b:, 'commentr_ft_nosynguess', []))
+
+  function! s:esunescape(text)
+    return substitute(substitute(a:text, '\v\\(.)', '\1', 'g'), ',', '\,', 'g')
+  endfunction
+
+  for tokens in tokenlist
+    " Try compose a valid 'ft' from tokens. Go from longest to shortest.
+    for i in range(len(tokens), 1, -1)
+      let synft = join(tokens[:i], '')
+      if index(noluck, synft) !=# -1
         continue
       endif
+      call add(noluck, synft)
 
-      if index(noguess, synft) !=# -1
-        continue
-      endif
+      let dummybuf = bufnr('commentr', 1)
+      try
+        call setbufvar(dummybuf, '&ft', synft)
+        call setbufvar(dummybuf, '&syntax', 'ON')
+        let did_ftplugin = !empty(getbufvar(dummybuf, 'did_ftplugin'))
+        let current_syntax = getbufvar(dummybuf, 'current_syntax')
 
-      call add(ftstack, synft)
+        if did_ftplugin || !empty(current_syntax)
+          for entry in b:commentr_cache
+            if entry.ft ==# synft
+            \  && entry.flags ==# a:flags
+              return [deepcopy(entry.cfg), deepcopy(entry.commentr)]
+            endif
+          endfor
+
+          let commentstring = getbufvar(dummybuf, 'commentr_commentstring', '')
+
+          " Syntax guess.
+          if empty(commentstring) && !empty(current_syntax)
+            call setbufvar(dummybuf, '&buflisted', '1')
+            exec dummybuf . 'bufdo redir => b:commentr_synlist | silent syn list | redir END'
+            call setbufvar(dummybuf, '&buflisted', '0')
+            let groupinfo = split(getbufvar(dummybuf, 'commentr_synlist'), '\n')[1:]
+
+            let grouppat = '\v\c^\V' . current_syntax . '\v\S*\ze\s'
+            let commentstring = []
+            let group = ''
+            for line in groupinfo
+              let linegroup = matchstr(line, grouppat)
+              if !empty(linegroup)
+                let group = linegroup
+              end
+
+              if !empty(group)
+                if synIDattr(synIDtrans(hlID(group)), 'name') !~# '\m\CComment$'
+                  continue
+                endif
+
+                let m = matchlist(line, '\v\Cmatch\s*\=?\s*(\S)(.{-})\1')
+                if !empty(m)
+                  let m = substitute(s:esunescape(m[2]), '\V.*', '%s', '')
+                  let m = substitute(m, '\V$\$', '\\$', '')
+                  let m = substitute(m, '\V\^^', '\\^', '')
+                  call add(commentstring, m)
+                  continue
+                endif
+
+                let m = matchlist(line, '\v\Cstart\s*\=?\s*(\S)(.{-})\1\s.*end\s*\=?\s*(\S)(.{-})\3')
+                if !empty(m)
+                  call add(commentstring, s:esunescape(m[2]) . '%s' . s:esunescape(m[4]))
+                  continue
+                endif
+              endif
+
+            endfor
+
+            let commentstring = join(commentstring, ',')
+          endif
+
+          " Fallback to Vim defaults.
+          if empty(commentstring) && did_ftplugin
+            let commentstring = getbufvar(dummybuf, '&commentstring')
+          endif
+          let comments = getbufvar(dummybuf, '&comments')
+
+          let cfg = s:getConfig([
+            \   get(b:, 'commentr_flags', ''),
+            \   getbufvar(dummybuf, 'commentr_flags'),
+            \   a:flags
+            \ ])
+
+          exec dummybuf . 'bwipeout'
+          unlet! dummybuf
+
+          if empty(commentstring)
+            continue
+          endif
+
+          let entry = {
+            \   'ft': synft,
+            \   'flags': a:flags,
+            \   'cfg': cfg,
+            \   'commentr': s:parseCommentstring(cfg, commentstring, comments)
+            \ }
+
+          call insert(b:commentr_cache, entry)
+          return [deepcopy(cfg), deepcopy(entry.commentr)]
+        endif
+
+      catch
+        if exists('dummybuf')
+          exec dummybuf . 'bwipeout'
+        endif
+        echoe 'catched: ' . v:exception
+      endtry
+
     endfor
-  endif
 
-  " Add fallback to actual filetype.
-  call add(ftstack, &ft)
-  return ftstack
-endfunction " 3}}}
-
-" Purpose: Return info about given filetype.
-function! s:getFiletypeStrings(ft) abort
-  " {{{3
-  let found = 0
-  let spacedft = ' ' . a:ft . ' '
-  let commentstring = ''
-  let comments = ''
-  let cbstack = []
-
-  for [langs, cms] in s:ft2cms
-    if langs ==# ' * ' || stridx(langs, spacedft) >=# 0
-      let found = 1
-      if type(cms) ==# v:t_func
-        call add(cbstack, cms)
-      elseif !empty(cms)
-        let commentstring = cms
-      endif
-      break
-    endif
   endfor
 
-  for Cb in reverse(cbstack)
-    let commentstring = Cb(commentstring, ft)
-  endfor
-
-  " Get missing fields from Vim.
-  if empty(comments) ||
-  \  empty(commentstring)
-    if a:ft !=# &ft
-      let oldft = &ft
-      exe 'set ft=' . a:ft
-      let found = found || b:did_ftplugin
-    else
-      let found = 1
-    endif
-
-    if empty(comments)
-      let comments = &comments
-    endif
-    if empty(commentstring)
-      let commentstring = &commentstring
-    endif
-
-    if exists('oldft')
-      exe 'set ft=' . oldft
-    endif
-  endif
-
-  return [found, commentstring, comments]
-endfunction " 3}}}
-
-" Purpose: Fill internal commentstring entries.
-function! s:getComments(cfg) abort
-  " {{{3
-  if !exists('b:commentr_cache')
-    let b:commentr_cache = {}
-  endif
-
-  for guessedft in s:guessFiletypes()
-    " If it's in the cache, it surely exists.
-    if has_key(b:commentr_cache, guessedft)
-    \  && b:commentr_cache[guessedft].cfg ==# a:cfg
-      break
-    endif
-
-    let [found, commentstring, comments] = s:getFiletypeStrings(guessedft)
-    if !found
-      continue
-    endif
-
-    let b:commentr_cache[guessedft] = {
-    \   'comments': s:parseCommentstring(a:cfg, commentstring, comments),
-    \   'cfg': a:cfg
-    \ }
-    break
-  endfor
-
-  return deepcopy(b:commentr_cache[guessedft].comments)
+  return [{}, []]
 endfunction " 3}}}
 
 " Purpose: Return range for (un)commenting.
@@ -742,46 +503,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
   return comments
 endfunction " 3}}}
 
-" Purpose: Tries guessing 
-function! s:getFiletypeFromSyn(synitem) abort
-  " {{{3
-  let synname = synIDattr(a:synitem, 'name')
-  let parts = split(synname, '\ze[A-Z]')
-
-  let found = 0 " this hack is needed because VimScript is presumably slower than C
-  let str = ' ' . tolower(parts[0])
-  let next_part_idx = 1
-  let next_part = tolower(parts[next_part_idx])
-  for [langs, _] in s:ft2cms
-    let idx = 0
-
-    while 1
-      let idx = stridx(langs, str, idx)
-      if idx ==# -1
-        break
-      endif
-
-      let found = 1
-
-      if next_part ==# strpart(langs, idx + strlen(str), strlen(next_part))
-        let str .= next_part
-        let next_part_idx += 1
-        if len(parts) >=# next_part_idx
-          return str[1:]
-        endif
-
-        let next_part = tolower(parts[next_part_idx])
-      endif
-
-      let idx = idx + 1
-    endwhile
-  endfor
-
-  return found ? str[1:] : ''
-endfunction " 3}}}
-
 " SECTION: Global functions {{{2
-
 " Purpose: Checks if cursor or the passed position is in or near of a
 " commented region.
 function! g:commentr#IsCommented(...) abort range
@@ -838,16 +560,14 @@ endfunction " 4}}}
 function! g:commentr#DoComment(...) abort range
   " {{{4
   let flags = get(a:, 1, '')
-  let env = s:getEnviron([g:commentr_default_flags, flags])
+  let [cfg, comments] = s:getComments(flags)
 
-  silent! call repeat#set(':Comment ' . escape(flags, '\') . '\<CR>')
+  silent! call repeat#set(':Comment ' . escape(flags, '\') . "\<CR>")
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
-  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, env.force_linewise, a:firstline, a:lastline)
-
-  let comments = env.comments
+  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, cfg.force_linewise, a:firstline, a:lastline)
 
   let min_width_lwhite = 2147483647
   let min_lwhite = ''
@@ -970,7 +690,7 @@ function! g:commentr#DoComment(...) abort range
 
   " Rank comments.
   " TODO: Use some advanced A.I. here.
-  if env.force_linewise
+  if cfg.force_linewise
     let comment = comments[0]
     for comm in comments
       if comm.rstr ==# ''
@@ -981,11 +701,11 @@ function! g:commentr#DoComment(...) abort range
     let comment = comments[0]
   endif
 
-  if !env.allow_lmstr
+  if !cfg.allow_lmstr
     let comment.lmstr = ''
   endif
 
-  let [lalign, ralign] = [env.lalign, env.ralign]
+  let [lalign, ralign] = [cfg.lalign, cfg.ralign]
   let will_com_after = comment.rstr !=# '' && range_type ==# 'block' && end_col ==# 2147483647 && ralign !~# '\m\C^[$<]$'
   let max_width = 0
 
@@ -1035,8 +755,6 @@ function! g:commentr#DoComment(...) abort range
       let lstr = need_start ? comment.lstr : comment.lmstr
 
       if start_col ==# 1
-        call assert_equal(lline, '')
-
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
           " Do nothing.
         elseif lalign ==# '_'
@@ -1082,11 +800,13 @@ function! g:commentr#DoComment(...) abort range
 
       " If whitespace is required before or after comment delimiters, but one
       " is already there, don't insert another one.
-      if need_start && lstr[0] ==# ' '
-        let lstr = lstr[!(lline[-1:] =~# '\C\S'):]
+      " | // ...| => |// ...|
+      if need_start && lline !~# '\S'
+        let lstr = strpart(lstr, comment.len_lmargin)
       endif
-      if empty(mline) && lstr[-1:] ==# ' ' && mode !=# 'i'
-        let lstr = lstr[:-1 - !(mline[0] =~# '\C\S')]
+      " |    // | => |    //|
+      if empty(mline) && mode !=# 'i'
+        let lstr = lstr[:-1 - comment.len_lpadding]
       endif
 
       let mline = lstr . mline
@@ -1206,17 +926,15 @@ function! g:commentr#DoUncomment(...) abort range
   " {{{4
   let winview = winsaveview()
   let flags = get(a:, 1, '')
-  let env = s:getEnviron([g:commentr_default_flags, flags])
+  let [cfg, comments] = s:getComments(flags)
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
-  silent! call repeat#set(':Uncomment' . escape(flags, '\') . '\<CR>')
+  silent! call repeat#set(':Uncomment' . escape(flags, '\') . "\<CR>")
 
   let [start_lnum, start_col, end_lnum, end_col, range_type] =
-    \ s:computeRange(mode, env.force_linewise, a:firstline, a:lastline)
-
-  let comments = env.comments
+    \ s:computeRange(mode, cfg.force_linewise, a:firstline, a:lastline)
 
   while 1
     for i in range(len(comments) - 1, 0, -1)
@@ -1239,7 +957,6 @@ function! g:commentr#DoUncomment(...) abort range
         if comment.rstr ==# ''
           let cend = [cstart[0], 2147483647]
         else
-"           call cursor(cstart[0], cstart[1] + len(comment.lstr) - max([comment.len_lmargin - 1, 0]) - comment.len_lpadding)
           if comment.escape(comment.rstr) ==# comment.rstr
             let cend = searchpairpos(comment.lpat, '', comment.rpat, 'nW', s:sskip_string)
             if cend ==# [0, 0]
@@ -1337,11 +1054,15 @@ function! g:commentr#DoUncomment(...) abort range
       let mline = strpart(line, lcom_start + lcom_len, rcom_start - lcom_start - lcom_len)
       let rline = strpart(line, rcom_start + rcom_len)
 
+      if lline !~# '\S'
+        let lcom_len_lmargin = 0
+      endif
+
       let lline = strpart(lline, 0, matchstrpos(lline, '\m\C\s\{,' . lcom_len_lmargin . '}$')[1])
       let mstart = matchstrpos(mline, '\m\C^\s\{,' . lcom_len_lpad . '}')[2]
       let mend = matchstrpos(mline, '\m\C\s\{,' . nextcomment.len_rpadding . '}$')[1]
       let mline = strpart(mline, mstart, mend - mstart)
-      let rline = strpart(rline, matchstrpos(lline, '\m\C^\s\{,' . nextcomment.len_rmargin . '}$')[1])
+      let rline = strpart(rline, matchstrpos(rline, '\m\C^\s\{,' . nextcomment.len_rmargin . '}\zs')[1])
 
       let mline = comment.unescape(mline)
 

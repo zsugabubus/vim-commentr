@@ -90,29 +90,13 @@ Example: >
 
 ------------------------------------------------------------------------------
 Filetype guessing					*commentr_ft_noguess*
-							*g:commentr_ft_noguess*
+							*b:commentr_ft_noguess*
 
-Specifies filetypes to disable filetype guesses. Values can be a {List} of
-filetypes or "*" to disable all kind of guesses.
+Specifies filetypes to disable filetype guesses.
 
 Example: >
-	let g:commentr_ft_noguess = { 'c': ['cpp'] }
-<	When 'filetype' is "c", disable "cpp" guesses. It's needed because
-	"cpp" uses syntax items from "c", so this way commentr would guess
-	that currently "cpp" code is edited inside "c". It can cause issues
-	when using C89 where there are no "//" comments. >
-	let g:commentr_ft_noguess = { 'html': '*' }
-<	Only use "html" comments inside a "html" file. Don't try to guess
-	based on syntax.
-
-------------------------------------------------------------------------------
-Disable default bindings				*commentr_no_mappings*
-							*g:commentr_no_mappings*
-
-1 to disable builtin mappings, otherwise enable.
-
-See |commentr_bindings|, for customizing builtin mappings, or
-|commentr-commands| and |commentr-functions| for how to add custom mappings.
+	au FileType cpp let b:commentr_ft_noguess = ['c']
+<	Never assume that "c" is being edited inside "cpp".
 
 ------------------------------------------------------------------------------
 Default bindings					*g:commentr_bindings*
@@ -127,6 +111,9 @@ Examples: >
 	{ 'c': '', 'cm': 'm', 'cd': 'DDD' }
 	{ 'c': '', 'ct': 'a' }
 <
+To disable builting mappings use "{}". See |commentr-commands| and
+|commentr-functions| about how to add custom mappings.
+
 List of plugin keys:				*commentr-builtin-keys*
 
 <Plug>(CommentrComment)
@@ -199,13 +186,11 @@ Insert mode mappings:
 CONCEPTS						*commentr-concepts*
 
 ------------------------------------------------------------------------------
-Comment flags					*commentr-flags*
-						*g:commentr_default_flags*
+Comment flags						*commentr-flags*
+							*b:commentr_flags*
 
 Controls commenting and uncommenting options. It's one-line string that
-composed from the combination of the following letters. Every flag is
-optional. Default values come from |g:commentr_default_flags|, otherwise 0 or
-empty string will be used, based on the nature of the option.
+composed from the combination of the following letters.
 
 {group}:
   {[a-z]}
@@ -314,6 +299,9 @@ empty string will be used, based on the nature of the option.
 
 	Note that <Tab> charaters will be split into spaces where necessary.
 
+Example: >
+	au FileType * let b:commentr_flags = ['*|1[1]0$']
+<
 ------------------------------------------------------------------------------
 Comment string					*commentr-comment-string*
 
