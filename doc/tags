@@ -2,6 +2,8 @@
 :ToggleComment	commentr.txt	/*:ToggleComment*
 :Uncomment	commentr.txt	/*:Uncomment*
 :UncommentLines	commentr.txt	/*:UncommentLines*
+b:commentr_flags	commentr.txt	/*b:commentr_flags*
+b:commentr_ft_noguess	commentr.txt	/*b:commentr_ft_noguess*
 commentr#CommentMotion()	commentr.txt	/*commentr#CommentMotion()*
 commentr#CommentMotion()	commentr.txt	/*commentr#CommentMotion()*
 commentr#ToggleCommentMotion()	commentr.txt	/*commentr#ToggleCommentMotion()*
@@ -19,9 +21,5 @@ commentr-intro	commentr.txt	/*commentr-intro*
 commentr-license	commentr.txt	/*commentr-license*
 commentr.txt	commentr.txt	/*commentr.txt*
 commentr_ft_noguess	commentr.txt	/*commentr_ft_noguess*
-commentr_no_mappings	commentr.txt	/*commentr_no_mappings*
 g:commentr_bindings	commentr.txt	/*g:commentr_bindings*
 g:commentr_commentstrings	commentr.txt	/*g:commentr_commentstrings*
-g:commentr_default_flags	commentr.txt	/*g:commentr_default_flags*
-g:commentr_ft_noguess	commentr.txt	/*g:commentr_ft_noguess*
-g:commentr_no_mappings	commentr.txt	/*g:commentr_no_mappings*

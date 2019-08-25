@@ -1,0 +1,56 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	0.0.0	/3fdf28bc/
+<Leader>	plugin/commentr.vim	/^    map <silent> <Leader> <Plug>(CommentrComment)$/;"	m
+<Leader>cu	plugin/commentr.vim	/^    map <silent> <Leader>cu <Plug>(CommentrUncomment)$/;"	m
+Comment	plugin/commentr.vim	/^command -range -nargs=? Comment if mode() ==# 'n'$/;"	c
+Documentation	README.md	/^## Documentation$/;"	s
+Features	README.md	/^## Features$/;"	s
+License	README.md	/^## License$/;"	s
+Quick Usage	README.md	/^## Quick Usage$/;"	s
+RM	Makefile	/^RM:=rm$/;"	m
+ToggleComment	plugin/commentr.vim	/^command -range -nargs=? ToggleComment if mode() ==# 'n'$/;"	c
+Uncomment	plugin/commentr.vim	/^command -range -nargs=? Uncomment$/;"	c
+VIM	Makefile	/^VIM?=nvim$/;"	m
+VIMFLAGS	Makefile	/^VIMFLAGS?=-u NONE$/;"	m
+Why?	README.md	/^## Why?$/;"	s
+clean	Makefile	/^clean:$/;"	t
+comment.escape	autoload/commentr.vim	/^    function comment.escape(expr) abort$/;"	f
+comment.unescape	autoload/commentr.vim	/^    function comment.unescape(expr) abort$/;"	f
+commentr	autoload/commentr.vim	/^augroup commentr$/;"	a
+commentr#CommentMotion	autoload/commentr.vim	/^function! g:commentr#CommentMotion() abort$/;"	f
+commentr#DoComment	autoload/commentr.vim	/^function! g:commentr#DoComment(...) abort range$/;"	f
+commentr#DoUncomment	autoload/commentr.vim	/^function! g:commentr#DoUncomment(...) abort range$/;"	f
+commentr#IsCommented	autoload/commentr.vim	/^function! g:commentr#IsCommented(...) abort range$/;"	f
+commentr#OpComment	autoload/commentr.vim	/^function! g:commentr#OpComment(mode) abort$/;"	f
+commentr#OpUncomment	autoload/commentr.vim	/^function! g:commentr#OpUncomment(mode) abort$/;"	f
+commentr#ToggleCommentMotion	autoload/commentr.vim	/^function! g:commentr#ToggleCommentMotion(flags)$/;"	f
+commentr#UncommentMotion	autoload/commentr.vim	/^function! g:commentr#UncommentMotion(...) abort range$/;"	f
+doc/tags	Makefile	/^doc\/tags: doc\/commentr.txt$/;"	t
+g:commentr_bindings	plugin/commentr.vim	/^  let g:commentr_bindings = { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+[' }$/;"	v
+g:commentr_mode_override	autoload/commentr.vim	/^  let g:commentr_mode_override = a:mode$/;"	v
+g:commentr_op_group	autoload/commentr.vim	/^  let g:commentr_op_group = a:flags$/;"	v
+g:commentr_op_group	autoload/commentr.vim	/^  let g:commentr_op_group = get(a:, 1, '')$/;"	v
+g:loaded_commentr	plugin/commentr.vim	/^let g:loaded_commentr = 1$/;"	v
+helptags	Makefile	/^helptags: doc\/tags$/;"	t
+s:c_commentstring	autoload/commentr.vim	/^let s:c_commentstring =$/;"	v
+s:ccmd	plugin/commentr.vim	/^    let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'$/;"	v
+s:computeRange	autoload/commentr.vim	/^function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort$/;"	f
+s:esunescape	autoload/commentr.vim	/^  function! s:esunescape(text)$/;"	f
+s:flags	plugin/commentr.vim	/^    let s:flags = escape(s:flags, '\\"')$/;"	v
+s:getComments	autoload/commentr.vim	/^function! s:getComments(flags) abort$/;"	f
+s:getConfig	autoload/commentr.vim	/^function! s:getConfig(flags) abort$/;"	f
+s:html_commentstrng	autoload/commentr.vim	/^let s:html_commentstrng = '<!--%s-->,,x\/&\/&amp;\/x\/--\/&#45;&#45;\/'$/;"	v
+s:isCommentedAt	autoload/commentr.vim	/^function! s:isCommentedAt(lnum, col) abort$/;"	f
+s:parseCommentstring	autoload/commentr.vim	/^function! s:parseCommentstring(cfg, commentstring, comments) abort$/;"	f
+s:poscmp	autoload/commentr.vim	/^function! s:poscmp(one, other) abort$/;"	f
+s:save_cpo	autoload/commentr.vim	/^let s:save_cpo = &cpo$/;"	v
+s:save_cpo	plugin/commentr.vim	/^let s:save_cpo = &cpo$/;"	v
+s:searchpos	autoload/commentr.vim	/^function! s:searchpos(pattern, stopline) abort$/;"	f
+s:setCommentstring	autoload/commentr.vim	/^function! s:setCommentstring(cms) abort$/;"	f
+s:sskip_string	autoload/commentr.vim	/^let s:sskip_string = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'$/;"	v
+vim-commentr	README.md	/^# vim-commentr$/;"	c

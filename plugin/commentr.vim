@@ -16,8 +16,11 @@ command -range -nargs=? Comment if mode() ==# 'n'
   \ | else
   \ |   keepjumps call commentr#DoComment(<f-args>)
   \ | endif
-command Uncomment keepjumps call commentr#DoUncomment('*')
-command UncommentLines keepjumps call commentr#DoUncomment('!')
+command -range -nargs=? Uncomment
+  \ |   keepjumps <line1>,<line2>call commentr#DoUnomment(<f-args>)
+  \ | else
+  \ |   keepjumps call commentr#DoUnomment(<f-args>)
+  \ | endif
 command -range -nargs=? ToggleComment if mode() ==# 'n'
   \ |   keepjumps <line1>,<line2>call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
   \ | else
@@ -48,7 +51,6 @@ if !empty(g:commentr_bindings)
       exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'o o' . s:ccmd
       exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'O O' . s:ccmd
     endif
-    exec 'imap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'i ' . s:ccmd
     exec 'vmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'c ' . s:ccmd
   endfor
 

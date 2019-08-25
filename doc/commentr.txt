@@ -10,150 +10,111 @@ A powerful commenter plugin.
 ==============================================================================
 COMMANDS						*commentr-commands*
 
-:[range]Comment	[flags]						*:Comment*
-			Comment a range of text.
-			Range is automagically calculated from current mode.
+:[range]Comment [flags]						*:Comment*
+		Comment a range of text. Range is automagically calculated
+		from current mode and [flags]. See |commentr-flags|.
 
-			|mode()|	range
-			n		The given [range]. Note that if no
-					explicit range is given Vim uses '.'
-					as default, i.e.  the line the under
-					cursor.
-
-			no		The motion. (Don't use it directly.)
-
+			|mode()|
+			n	The given [range].
+			no	The motion.
+				See: |commentr#CommentMotion()|.
 			v, V, CTRL-V
-			s, S, CTRL-S	Selected range from '[ to '].
+			s, S, CTRL-S
+				Range from '[ to '].
+			i	A zero-length range at the position of
+				the cursor
 
-			i		A zero-length range at the position of
-					the cursor
+		Example: >
+			map {binding} <Cmd>Comment C<CR>
+			map {binding} <Cmd>Uncomment<CR>
+<
+:[range]Uncomment [flags]				*:Uncomment*
+		Like |:Comment|, but uncomment a range of text.
 
-			Calling in every other mode is an error.
-
-			Example: >
-				map {binding} <Cmd>Comment<CR>
-				map {binding} <Cmd>Uncomment<CR>
-<				Calculates region from current mode.
-
-			For flags see |commentr-flags|.
-
-:[range]Uncomment						*:Uncomment*
-			Uncomment a range of text.
-			See |:Comment| for how range is calculated.
-
-:[range]UncommentLines					*:UncommentLines*
-			Same as |:Uncomment|, but force linewise mode.
-			See |:Comment| for how range is calculated.
-
-:[range]ToggleComment	[flags]					*:ToggleComment*
-			If the text under the cursor is uncommented sam as
-			|:Comment| otherwise |:Uncomment|. Determining whether
-			a text is commented is based on syntax item under and
-			around cursor.
-			For more see |:Comment|.
-
+:[range]ToggleComment [flags]				*:ToggleComment*
+		If text under cursor is uncommented same as |:Comment|
+		otherwise |:Uncomment|. Determining whether text is commented
+		or not is based on syntax item under and around cursor.
 
 List of funtions:					*commentr-functions*
 
 commentr#CommentMotion({flags})			*commentr#CommentMotion()*
-		Can be used to comment text over motion. This way |:Comment|
-		will be called in |Operator-pending-mode|. Using together with
-		|:map-<expr>|, it's a convenient way to specify commenting over
-		predefined motions.  Example: >
-			nmap <expr> gc; commentr#CommentMotion('') . 'f;'
-<		comments out line to the next ";". >
+		|:Comment| text over motion. Calls it in
+		|Operator-pending-mode|.
+
+		Example: >
+			nmap <expr> gc; commentr#CommentMotion('') . 't;'
+<		comment out everything till the next ";". >
 			map <expr> gcc
-			  \ '_' . commentr#CommentMotion({flags}) . '$'
-<		Comment out current line, starting from the first non-white
+			  \ '_' . commentr#CommentMotion('') . '$'
+<		comment out current line, starting from the first non-white
 		character.
 
-commentr#UncommentMotion({flags})			*commentr#CommentMotion()*
-		Same as |commentr#CommentMotion()|, but it calls |:Uncomment|.
+commentr#UncommentMotion({flags})		*commentr#UncommentMotion()*
+		|:Uncomment| text over motion.
 
 commentr#ToggleCommentMotion({flags})	*commentr#ToggleCommentMotion()*
-		Same as |commentr#CommentMotion()|, but it calls |:ToggleComment|.
+		|:ToggleComment| over motion.
 
 ==============================================================================
 CONFIGURATION					*commentr-configuration*
 
 ------------------------------------------------------------------------------
-Custom commentstrings				*g:commentr_commentstrings*
+							*g:commentr_bindings*
+Map keybindings to |commentr-flags|. The |Dictionary| shall contain items
+in "binding": "flags" format. for what "flags" can
 
-Mapping between 'filetype's and |commentr-comment-string|s. Expects a
-{Dictionary}. If an empty value is specified, filetype will be removed from
-internal lookup table.
+	{binding}	Any valid {lhs} for |:map|.
+			Used like: >
+				map <Plug>(CommentrComment){binding} ...
+<
+	{flags}		See |commentr-flags|
 
-Example: >
-	let g:commentr_commentstrings = { "x": "", "c": "//*/%s" }
-<	Only use standard 'commentstring' and 'comment' for filetype "x".
-	Change commentstring for "c".
-
-------------------------------------------------------------------------------
-Filetype guessing					*commentr_ft_noguess*
-							*b:commentr_ft_noguess*
-
-Specifies filetypes to disable filetype guesses.
-
-Example: >
-	au FileType cpp let b:commentr_ft_noguess = ['c']
-<	Never assume that "c" is being edited inside "cpp".
-
-------------------------------------------------------------------------------
-Default bindings					*g:commentr_bindings*
-
-Used for mapping a specific keybinding fragment to a commenting flag. It is a
-{Dictionary} that contains items in the format of "binding": "flags". See
-|commentr-flags| for what "flags" can be. "binding" can be any {String} that
-specifies a valid key combination. It will be used in the following format for
-adding builtin mappings: "<Plug>(CommentrComment){binding}".
+To disable builtin mappings just use "{}".
 
 Examples: >
-	{ 'c': '', 'cm': 'm', 'cd': 'DDD' }
+	{ 'c': '', 'cm': 'm', 'c<Space>': 'DDD' }
 	{ 'c': '', 'ct': 'a' }
 <
-To disable builting mappings use "{}". See |commentr-commands| and
-|commentr-functions| about how to add custom mappings.
+If you wish to add custom keybindings, see |commentr-commands| and
+|commentr-functions| for examples.
 
-List of plugin keys:				*commentr-builtin-keys*
+List of plugin keys:				*commentr-keys*
 
 <Plug>(CommentrComment)
-	Used for toggling comments.
+		Used for keybindings that toggles comments.
 
 <Plug>(CommentrUncomment)
-	Used for
+		Used for keybindings that uncomment text.
 
 Example: >
 	nmap gc <Plug>(CommentrComment)
 	nmap gcu <Plug>(CommentrUncomment)
 <	Change prefix of default mappings only in normal mode.
 
-List of builtin mappings			*commentr-builtin-mappings*
+List of builtin mappings:			*commentr-builtin-mappings*
 
-If |commentr_no_mappings| is not enabled the following mappings will be used.
+|Normal-mode| mappings:
 
-Normal mode mappings:
+<Plug>(CommentrComment){binding}{motion}
+		Toggle comment on a range of text moved over by {motion}.
 
-<Plug>(CommentrComment)<binding>{motion}
-	Toggle comment on text moved over by {motion}.
-	Note that every top-level comments will be removed even if its end is
-	after {motion}.
+		Note: Every top-level comments will be removed even if its end
+		extends beyond {motion}.
 
-<Plug>(CommentrComment)<binding>c
-	Toggle comment on current line. It can be treated as a shortcut to
-	"_<Plug>(CommentrComment)$" but uses internal alignment specifiers
-	from |commentr_align| instead of jumping with "_" and "$" to position
-	parts of the comment.
+<Plug>(CommentrComment){binding}c
+	Toggle comment on current line.
 
-<Plug>(CommentrComment)<binding>A
+<Plug>(CommentrComment){binding}A
 	Jump with |A| and insert comment, i.e. append comment.
 
-<Plug>(CommentrComment)<binding>I
+<Plug>(CommentrComment){binding}I
 	Jump with |I| and insert comment, i.e. prepend comment.
 
-<Plug>(CommentrComment)<binding>o
+<Plug>(CommentrComment){binding}o
 	Jump with |o| and insert comment, i.e. insert comment below.
 
-<Plug>(CommentrComment)<binding>O
+<Plug>(CommentrComment){binding}O
 	Jump with |O| and insert comment, i.e. insert comment above.
 
 <Plug>(CommentrComment)C{motion}
@@ -169,7 +130,7 @@ Normal mode mappings:
 <Plug>(CommentrUncomment)u
 	Uncomment current line.
 
-Visual mode mappings:
+|Visual-mode| mappings:
 
 <Plug>(CommentrComment)<group>c
 	Comment out regin.
@@ -177,10 +138,13 @@ Visual mode mappings:
 <Plug>(CommentrUncomment)
 	Uncomment region.
 
-Insert mode mappings:
+------------------------------------------------------------------------------
+							*b:commentr_ft_noguess*
+Prohibit filetype to be guessed.
 
-<Plug>(CommentrComment)<group>i
-	Insert comment at the place of the cursor.
+Example: >
+	au FileType cpp let b:commentr_ft_noguess = ['c']
+<	Never assume that "c" is being edited inside "cpp".
 
 ==============================================================================
 CONCEPTS						*commentr-concepts*
@@ -189,115 +153,116 @@ CONCEPTS						*commentr-concepts*
 Comment flags						*commentr-flags*
 							*b:commentr_flags*
 
-Controls commenting and uncommenting options. It's one-line string that
-composed from the combination of the following letters.
+Controls commenting and uncommenting options. It's one-line |String| that
+can be compined from the followings:
 
-{group}:
-  {[a-z]}
-	Specifies a group to used for commenting and uncommenting.
-  {[A-Z]}
-	Specifies a group to used for commenting and uncommenting. Force
-	linewise mode.
-  *	All groups.
+  {group}
+	Single-letter group identifier to be used for commenting and
+	uncommenting.
 
-	Comment group is a single letter [a-z]. In contexts where it can be
-	omitted, it defaults to "c". It is the default group.
+	{a-z}	Group.
+	{A-Z}	Force line-wise operation of mode.
+	*	All group.
 
 	Conventionally "d" is used for documentation comments and "m" for
 	module comments.
 
+	Default: "c".
+
   =	Force linewise mode.
 
   +{left-align}{left-margin}[{left-padding}
-  {right-padding}]{right-margin}{right-align}+
-	Specifies alignment, margins and paddings for left and right end of
-	comments respectively. Margins and paddings are {Number}
+                             {right-padding}]{right-margin}{right-align}+
+	Specifies alignment, margins and paddings for left and right ends of
+	comments respectively.
 
-	"+" signs allow middle parts of a three-piece comment on the left and
-	right sides. Disallowed by default. See 'comments' for left middle
-	pieces.
+	+	Allow middle parts of a multi-piece comment on the left and
+		right sides. Default disabled. See 'comments' for left middle
+		pieces. Note: Relative alignment not implemented.
 
-	Text: >
-		Lorem     /*      ispum      */     dolor
-<	Margin: >
-		     [<->]                     [<->]
-<	Padding: >
-		            [<->]       [<->]
+	{left-margin}
+	{right-margin}
+	{left-padding}
+	{right-padding}
+		Positive |Number|s.
+
+		Text: >
+			Lorem     /*      ispum      */     dolor
+<			Margin: >
+			     [<->]                     [<->]
+<			Padding: >
+			            [<->]       [<->]
 <
-	Example: >
-		3[4]5
-<	Left margin: 3; left and right padding: 4; right margin: 5.
+		Example: >
+			3[4]5
+<			Left margin: 3; left and right padding: 4;
+			right margin: 5.
 
-	Alignment:				*commentr-comment-alignment*
+	{left-align}
+		0	Place left part of comment to the first column.
+>
+			 1|>   struct foobar {
+			 2|>    field1,
+			 3|>      field1,
+			 4|>   }
+<
+		_	Place left part of comment before the first non-white
+			character.
+>
+			 1|   >struct foobar {
+			 2|    >field1,
+			 3|      >field1,
+			 4|   >}
+<
+		|	Place left part of comment to one column and as right
+			as possible.
+>
+			 1|   >struct foobar {
+			 2|   > field1,
+			 3|   >   field1,
+			 4|   >}
+<
+		<Tab> charaters will be break into spaces if necessary.
 
-	{left}	meaning
-	0	Place left part of comment to the first column.
->
-		 1|>   struct foobar {
-		 2|>    field1,
-		 3|>      field1,
-		 4|>   }
+	{right-align}
+		$	Append right part of comment to the line.
 
-	_	Place left part of comment before the first non-white
-		character.
->
-		 1|   >struct foobar {
-		 2|    >field1,
-		 3|      >field1,
-		 4|   >}
+			With trailing whites: >
+			 1|   struct foobar {    <
+			 2|    field1,  <
+			 3|      field1, <
+			 4|   }   <
 <
-	|	Place left part of comment to one column and as right as
-		possible.
+		<	Same as $, but remove trailing whites.
 >
-		 1|   >struct foobar {
-		 2|   > field1,
-		 3|   >   field1,
-		 4|   >}
+			 1|   struct foobar {<
+			 2|    field1,<
+			 3|      field1,<
+			 4|   }<
 <
-	{right}	meaning
-	$	Append right part of comment to the line.
+		|	Remove trailing whites and place right part of comment
+			to one column and as left as possible. Note that lines
+			may be longer than 'textwidth'.
 >
-		(assume trailing whites)
+			 1|   struct foobar {<
+			 2|    field1,       <
+			 3|      field1,     <
+			 4|   }              <
+<
+		I, >	Remove trailing whites and stretch line to 'textwidth'
+			character wide by inserting spaces. When no
+			'textwidth' is specified, ">" is the same as "|", "I"
+			is the same as "$".
+>
+			set &textwidth=15
 
-		 1|   struct foobar {    <
-		 2|    field1,  <
-		 3|      field1, <
-		 4|   }   <
+			  |--------------|
+			  |12345678901234567890
+			 1|   struct foobar {<
+			 2|    field1,   <
+			 3|      field1, <
+			 4|   }          <
 <
-	<	Same as $, but remove trailing whites.
->
-		 1|   struct foobar {<
-		 2|    field1,<
-		 3|      field1,<
-		 4|   }<
-<
-	|	Remove trailing whites and place right part of comment to one
-		column and as left as possible. Note that lines may be longer
-		than 'textwidth'.
->
-		 1|   struct foobar {<
-		 2|    field1,       <
-		 3|      field1,     <
-		 4|   }              <
-<
-	I, >	Remove trailing whites and stretch line to 'textwidth'
-		character wide by inserting spaces. When no 'textwidth' is
-		specified, ">" is the same as "|", "I" is the same as "$".
->
-		set &textwidth=15
-
-		   |-------------|
-		  |12345678901234567890
-		 1|   struct foobar {<
-		 2|    field1,   <
-		 3|      field1, <
-		 4|   }          <
-<
-	Example: >
-		|$
-<	The most natural way.
-
-	Note that <Tab> charaters will be split into spaces where necessary.
 
 Example: >
 	au FileType * let b:commentr_flags = ['*|1[1]0$']
@@ -310,7 +275,7 @@ comma-separated list of commenting alternatives. Each alternative consits of:
 	[{flags}...][{lalign}]{format}[{ralign}][,,{transform}...]
 
 {flags}:
-  \=x	Group to be use for the current and further
+    \=x	Group to be use for the current and further
 	comments. Internally, "\=d" used for documentation and
 	"\=m" for module comments.
 
@@ -325,7 +290,7 @@ comma-separated list of commenting alternatives. Each alternative consits of:
 	appended to the end of {format}.  Example: >
 		//%s
 		//
-<	means the same format.
+<	means the same.
 
 	Escape sequences:
 	  \n	Line break.
@@ -379,13 +344,8 @@ Examples: >
 See "autoload/commentr.vim" for more examples.
 
 ==============================================================================
-CONTRIBUTIONS					*commentr-contributions*
-
-Contributions and pull requests are welcome.
-
-==============================================================================
 LICENSE							*commentr-license*
 
 Released under the GNU General Public License version v3.0 or later.
 
- vim:noet:tw=78:ts=8:ft=help:norl:nowrap
+ vim:tw=78:ts=8:noet:ft=help:norl:nowrap
