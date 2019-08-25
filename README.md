@@ -32,8 +32,8 @@ motion commenting. I also wanted to try tcomment, but WTF?! When I looked at
 the keybindings again WTF?! When I saw that it has separate keybindings for
 inline and block-style commenting... no, no, thanks not, I just don't care
 about it. Looking inside them, you can see they are both consist of about 2500
-lines of Vim-script. commentr is just 1300. Ask yourself what's that additional
-1200 lines. Hacks? Workarounds? I don't even dare to think about it... And from
+lines of Vim-script. commentr is just 1000. Ask yourself what's that additional
+1500 lines. Hacks? Workarounds? I don't even dare to think about it... And from
 my viewpont, commentr seems way more flexible.
 
 ## License
