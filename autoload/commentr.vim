@@ -20,12 +20,6 @@ let s:c_commentstring =
     \      s_*/_|)}>#_
     \      ,\=d/**%s*/'
 
-function! s:setCommentstring(cms) abort
-  if !has_key(b:, 'commentr_commentstring'
-    let b:commentr_commentstring = cms
-  endif
-endfunction
-
 augroup commentr
   au!
   au FileType cpp
@@ -78,7 +72,7 @@ function! s:getConfig(flags) abort
     \   ['force_linewise', '^[A-Z]',           0],
     \   ['allow_lmstr',    '\+.\d*[',          0],
     \   ['lalign',         '([0_|])\d*[',      '|'],
-    \   ['lmargin',        '(\d+)[',           3],
+    \   ['lmargin',        '(\d+)[',           1],
     \   ['lpadding',       '[(\d+)',           1],
     \   ['rpadding',       '(\d+)]',           1],
     \   ['rmargin',        '](\d+)',           1],
@@ -89,8 +83,12 @@ function! s:getConfig(flags) abort
       let val = matchlist(flags, '\v\C' . pat)
       if !empty(val)
         let cfg[name] =
-          \ type(def) ==# v:t_number ? (val[1] =~# '\m^\d\+$' ? str2nr(val[1], 10) : 1) :
-          \ type(def) ==# v:t_list ? add(get(cfg, name, []), val[1]) :
+          \ type(def) ==# v:t_number ?
+          \   (val[1] =~# '\m^\d\+$' ?
+          \     str2nr(val[1], 10) :
+          \     1) :
+          \ type(def) ==# v:t_list ?
+          \   add(get(cfg, name, []), val[1]) :
           \ val[1]
       elseif !has_key(cfg, name)
         let cfg[name] = def
@@ -143,8 +141,8 @@ function! s:getComments(flags) abort
   endif
 
   let synstack = synstack(line('.'), col('.'))
-  let synstack = map(synstack, {_,item-> synIDattr(item, "name")})
-  let tokenlist = map(synstack, {_,synname-> map(split(synname, '\m\C\ze[A-Z]'), 'tolower(v:val)')})
+  let synstack = map(synstack, {_, item-> synIDattr(item, "name")})
+  let tokenlist = map(synstack, {_, synname-> map(split(synname, '\m\C\ze[A-Z]'), 'tolower(v:val)')})
   let tokenlist = add(reverse(tokenlist), [&ft])
   let noluck = copy(get(b:, 'commentr_ft_nosynguess', []))
 
@@ -319,7 +317,7 @@ function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort
   endif
 
   if a:force_linewise
-    let start_col = 1
+    let start_col =  a:mode !=# "\<C-V>" ? 1 : start_col
     let end_col = 2147483647
     let range_type = 'char'
   endif
@@ -338,8 +336,8 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
   for token in tokens
     let token = substitute(token, '\v\C\\([\\,])', '\1', 'g')
 
-    let [_, _, grp, lcom, _, rcom, _, escs; _] =
-        \ matchlist(token, '\v\C^(\\\=([a-z]))?(.{-})(\%s(.{-}))?(,,(.*))?$')
+    let [grp, lcom, rcom, escs] =
+        \ matchlist(token, '\v\C^%(\\\=([a-z]))?(.{-})%(\%s(.{-}))?%(,,(.*))?$')[1:4]
     if !empty(grp)
       let group = grp
     endif
@@ -356,7 +354,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
     let comment.group = group
 
     let lcom = substitute(lcom, '\\,', ',', 'g')
-    let [_, _, lsel, lstr; _] = matchlist(lcom, '\v\C^(\\([0^_]))?(.*)$')
+    let [lsel, lstr] = matchlist(lcom, '\v\C^%(\\([0^_]))?(.*)$')[1:2]
     let comment.lstr = lstr
     let comment.header = header
     let comment.lsel = !empty(lsel) ? lsel : '*'
@@ -387,7 +385,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
       \     repeat(' ', a:cfg.lpadding - len_padding)
 
     let rcom = substitute(rcom, '\\,', ',', 'g')
-    let [_, rstr, _, rsel; _] = matchlist(rcom, '\v\C^(.{-})(\\([$_]))?$')
+    let [rstr, rsel] = matchlist(rcom, '\v\C^(.{-})%(\\([$_]))?$')[1:2]
     let comment.rstr = rstr
     let comment.footer = footer
     let comment.rsel = !empty(rsel) ? rsel : (empty(rstr) ? '$' : '*')
@@ -397,7 +395,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
       \   substitute(
       \     escape(comment.rstr, '\'),
       \   '\m^\s\+', '\\(\\s\\|\\^\\)', ''),
-      \'\m\s\+$', '\\(\\s\\|\\$\\)', '')
+      \'\m\s\+$', '\_s', '')
       \ . '\m' .
       \ {
       \   '$': '$',
@@ -425,7 +423,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
     let comment.unescss = []
 
     while !empty(escs)
-      let [_, op, sep, pat, sub, escs; _] = matchlist(escs, '\v\C^\s*(\S)(.)(.{-})\2(.{-})\2\s*(\S.*|)$')
+      let [op, sep, pat, sub, escs] = matchlist(escs, '\v\C^\s*(\S)(.)(.{-})\2(.{-})\2\s*(\S.*|)$')[1:5]
       if op ==# 's'
         call add(comment.escss, ['\V\C' . pat, sub])
       elseif op ==# 'S'
@@ -459,7 +457,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
 
   let tokens = split(a:comments, ',')
   for token in tokens
-    let [_, lflags, digits, rflags, string; _] = matchlist(token, '\v\C^([a-zA-Z]*)([-0-9]*)([a-zA-Z]*):(.*)$')
+    let [lflags, digits, rflags, string] = matchlist(token, '\v\C^([a-zA-Z]*)([-0-9]*)([a-zA-Z]*):(.*)$')[1:4]
     let flags = lflags . rflags
     " Blank required after string.
     if flags =~# '\m\C[b]' && string !~# '\m\C\s$'
@@ -594,7 +592,7 @@ function! g:commentr#DoComment(...) abort range
     let com_start = lnum !=# start_lnum && range_type !=# 'block' ? 1 : start_col
 
     if min_width_lwhite ># 0
-      let [_, lwhite, nonwhite; _] = matchlist(line, '\v\C^(\s*)(\S?)')
+      let [lwhite, nonwhite] = matchlist(line, '\v\C^(\s*)(\S?)')[1:2]
       if nonwhite !=# ''
         let width_lwhite = strdisplaywidth(lwhite)
 
@@ -715,14 +713,14 @@ function! g:commentr#DoComment(...) abort range
       let comment.lstr = strpart(comment.lstr, 0, len(comment.lstr) - comment.len_lpadding)
       let comment.len_lpadding = 0
       call append(start_lnum - 1, map(comment.header,
-        \ {_, line -> min_lwhite . line}))
+        \ {_, line-> min_lwhite . line}))
       let end_lnum += len(comment.header)
     endif
     if !empty(comment.footer)
       " let comment.rstr = strpart(comment.rstr, comment.len_rpadding)
       " let comment.len_rpadding = 0
       call append(end_lnum, map(comment.footer,
-        \ {_, line -> min_lwhite . line}))
+        \ {_, line-> min_lwhite . line}))
       let end_lnum += len(comment.footer)
     endif
   endif
@@ -1075,7 +1073,7 @@ function! g:commentr#DoUncomment(...) abort range
       endif
     endfor
 
-    let Trimmer = {_, line -> trim(line)}
+    let Trimmer = {_, line-> trim(line)}
     let [header_start, header_end] = [cstart_lnum, cstart_lnum + len(nextcomment.header) - 1]
     let [footer_start, footer_end] = [cend_lnum - len(nextcomment.footer) + 1, cend_lnum]
     if    map(getline(header_start, header_end), Trimmer)

@@ -51,6 +51,5 @@ s:poscmp	autoload/commentr.vim	/^function! s:poscmp(one, other) abort$/;"	f
 s:save_cpo	autoload/commentr.vim	/^let s:save_cpo = &cpo$/;"	v
 s:save_cpo	plugin/commentr.vim	/^let s:save_cpo = &cpo$/;"	v
 s:searchpos	autoload/commentr.vim	/^function! s:searchpos(pattern, stopline) abort$/;"	f
-s:setCommentstring	autoload/commentr.vim	/^function! s:setCommentstring(cms) abort$/;"	f
 s:sskip_string	autoload/commentr.vim	/^let s:sskip_string = 'synIDattr(synID(line("."), col("."), 0), "name") =~? "string"'$/;"	v
 vim-commentr	README.md	/^# vim-commentr$/;"	c
