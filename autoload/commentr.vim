@@ -133,6 +133,14 @@ function! s:isCommentedAt(lnum, col) abort
   return synIDattr(synIDtrans(synID(a:lnum, a:col, 1)), "name") =~? 'comment'
 endfunction
 
+function! s:isPlainText(s) abort
+  try
+    return matchstrpos(s, s)[2] ==# strlen(s)
+  catch
+    return 0
+  endtry
+endfunction
+
 " Purpose: Get suitable comments for config.
 function! s:getComments(flags) abort
   " {{{3
@@ -202,13 +210,18 @@ function! s:getComments(flags) abort
                   let m = substitute(s:esunescape(m[2]), '\V.*', '%s', '')
                   let m = substitute(m, '\V$\$', '\\$', '')
                   let m = substitute(m, '\V\^^', '\\^', '')
-                  call add(commentstring, m)
+                  if s:isPlainText(m)
+                    call add(commentstring, m)
+                  endif
                   continue
                 endif
 
                 let m = matchlist(line, '\v\Cstart\s*\=?\s*(\S)(.{-})\1\s.*end\s*\=?\s*(\S)(.{-})\3')
                 if !empty(m)
-                  call add(commentstring, s:esunescape(m[2]) . '%s' . s:esunescape(m[4]))
+                  let m = s:esunescape(m[2]) . '%s' . s:esunescape(m[4])
+                  if s:isPlainText(m)
+                    call add(commentstring, m)
+                  endif
                   continue
                 endif
               endif
