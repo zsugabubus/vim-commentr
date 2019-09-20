@@ -489,14 +489,21 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
 
     " Three-piece comment has been fully parsed.
     if flags =~# '\Ce'
+      let found = 0
+
       " FIXME: Take account alignments.
       for comment in comments
         if   !has_key(comment, 'lmstr')
         \ && trim(comment.lstr, ' ') ==# trim(sme.s, ' ')
         \ && trim(comment.rstr, ' ') ==# trim(sme.e, ' ')
-          let comment.lmstr = ' ' . sme.m
+          if has_key(sme, 'm')
+            let comment.lmstr = ' ' . sme.m
+          endif
+          let found = 1
         endif
       endfor
+
+      " TODO: Do something if not found because it shouldn't happen.
     endif
   endfor
 
