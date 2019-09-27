@@ -795,14 +795,12 @@ function! g:commentr#DoComment(...) abort range
       let rstr = need_end ? comment.rstr : comment.rmstr
       if end_col ==# 2147483647
         if ralign ==# '$'
-          exec "normal! \<Esc>A" . rstr[:-(comment.len_rmargin + 1)]
+          exec "normal! \<Esc>A" . rstr
         elseif ralign ==# '<'
-          exec "normal! \<Esc>g_" . rstr[:-(comment.len_rmargin + 1)]
+          exec "normal! \<Esc>g_" . rstr
         endif
 
       else
-        exec 'normal! g_'
-        let rstr = virtcol('.') > end_col ? rstr : rstr[:-(comment.len_rmargin + 1)]
         exec "normal! \<Esc>" . end_col . '|a' . rstr
 
       endif
@@ -828,18 +826,6 @@ function! g:commentr#DoComment(...) abort range
 
       endif
     endif
-
-    " Block
-    " else
-    "   exec 'normal! ' . start_col . '|m<' . end_col . '|m>'
-    "   exec '%s/\m\%''>' . (&selection ==# 'inclusive' ? '.\zs' : '') . '/' . escape(comment.rstr, '/') . '/e'
-    "   for [pat, sub] in comment.escss
-    "     exec '%s/\m\%>''<\(\%<''>' . (&selection ==# 'inclusive' ? '\|\%''>' : '') . '\)' . escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
-    "   endfor
-
-    "   " Note: Marks are not updated, so order matters.
-    "   exec '%s/\m\%''</' . escape(comment.lstr, '/') . '/e'
-    " endif
 
     if will_com_after
       let new_line_width = virtcol('$')
@@ -873,6 +859,7 @@ function! g:commentr#DoComment(...) abort range
 
     let &virtualedit=old_virtedit
   endif
+  exec start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
 endfunction " 4}}}
 
 " Uncommenting {{{3
