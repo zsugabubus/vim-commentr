@@ -9,6 +9,7 @@ The commenter plugin for Vim.
 - Commentr is also file-type aware and properly escapes comments, so you never again have to fear of editing HTML or Vue files.
 - Insert documentation, module or any other kind of comments into Rust or anywhere you want. Add your bindings for your favourite groups and configuration.
 - Everything configurable with a single line.
+- Does not use `setline()`.
 - Lightweight.
 - Impossible? Install and try out.
 
@@ -32,9 +33,8 @@ motion commenting. I also wanted to try tcomment, but WTF?! When I looked at
 the keybindings again WTF?! When I saw that it has separate keybindings for
 inline and block-style commenting... no, no, thanks not, I just don't care
 about it. Looking inside them, you can see they are both consist of about 2500
-lines of Vim-script. commentr is just 1000. Ask yourself what's that additional
-1500 lines. Hacks? Workarounds? I don't even dare to think about it... And from
-my viewpont, commentr seems way more flexible.
+lines of Vim-script. commentr is just 1000 or even less. Ask yourself what's
+that additional 1500 lines. Hacks? Workarounds?
 
 ## License
 
