@@ -174,8 +174,9 @@ function! s:getComments(flags) abort
       endif
       call add(noluck, synft)
 
-      let dummybuf = bufnr('commentr', 1)
+      let dummybuf = bufnr('CommentRDummyBuffer', 1)
       try
+        call setbufvar(dummybuf, '&buftype', 'scratch')
         call setbufvar(dummybuf, '&ft', synft)
         call setbufvar(dummybuf, '&syntax', 'ON')
         let did_ftplugin = !empty(getbufvar(dummybuf, 'did_ftplugin'))
@@ -272,7 +273,6 @@ function! s:getComments(flags) abort
         if exists('dummybuf')
           exec dummybuf . 'bwipeout'
         endif
-        echoe 'catched: ' . v:exception
       endtry
 
     endfor
@@ -304,12 +304,12 @@ function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort
       let end_col = 2147483647
     endif
 
-    let range_type = a:mode ==# 'block' ? 'block' : 'char'
+    let range_type = a:mode ==# 'block' && start_lnum !=# end_lnum ? 'block' : 'char'
 
   elseif a:mode ==# 'n'
     let [start_lnum, start_col] = [a:firstline_, 1]
     let [end_lnum,   end_col]   = [a:lastline_,  2147483647]
-    let range_type = 'block'
+    let range_type = 'char'
 
   elseif a:mode ==# 'i'
     let [start_lnum, start_col] = [line('.'), virtcol('.')]
@@ -743,7 +743,7 @@ function! g:commentr#DoComment(...) abort range
 
   if range_type ==# 'char' && start_col ==# 1 && end_col == 2147483647
     if !empty(comment.header)
-      " Note:Whitespaces are single byte.
+      " Note: Whitespaces are single byte.
       let comment.lstr = strpart(comment.lstr, 0, len(comment.lstr) - comment.len_lpadding)
       let comment.len_lpadding = 0
       call append(start_lnum - 1, map(comment.header,
@@ -762,7 +762,7 @@ function! g:commentr#DoComment(...) abort range
   if range_type ==# 'block'
     exec 'normal! A' . comment.rstr
     exec 'normal! gvI' . comment.lstr
-    exec start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
+    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
     " No escape in block mode, because:
     " a) Handling visual mode to eof is more important,
     " b) What should we really escape?
@@ -770,29 +770,19 @@ function! g:commentr#DoComment(...) abort range
   endif
 
   for [pat, sub] in comment.escss
-    exec '%s/' . s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col) .
+    exec 'silent keeppattern %s/' . s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col) .
       \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
   endfor
+
+  let old_virtedit=&virtualedit
+  set virtualedit=all
 
   for lnum in range(start_lnum, end_lnum)
     call cursor(lnum, 1)
 
-    if range_type ==# 'char'
-      let need_start  = lnum ==# start_lnum || comment.rstr ==# '' || (range_type ==# 'block' && comment.rstr !=# '' && start_col !=# 1)
-      let need_end    = lnum ==# end_lnum || (range_type ==# 'block' && comment.rstr !=# '' && start_col !=# 1)
-      let need_end = need_end && !will_com_after
-" (!need_end || trim(mline) !=# '')
-      let need_lmiddle = (!need_end) && start_col ==# 1 && end_col ==# 2147483647 && comment.lmstr !=# ''
-    else
-      let need_start  = 1
-      let need_lmiddle = start_col ==# 1 && comment.lmstr !=# ''
-      let need_end    = 1
-    endif
-    let need_rmiddle = 0
+    if !empty(comment.rstr) && (lnum ==# end_lnum || !empty(comment.rmstr))
+      let rstr = lnum ==# end_lnum ? comment.rstr : comment.rmstr
 
-    if need_end || need_rmiddle
-      " FIXME: Use proper rmargin
-      let rstr = need_end ? comment.rstr : comment.rmstr
       if end_col ==# 2147483647
         if ralign ==# '$'
           exec "normal! \<Esc>A" . rstr
@@ -806,9 +796,9 @@ function! g:commentr#DoComment(...) abort range
       endif
     endif
 
-    if need_start || need_lmiddle
+    if lnum ==# start_lnum || empty(comment.rstr) || !empty(comment.lmstr)
       " FIXME: Use proper lmargin
-      let lstr = need_start ? comment.lstr : comment.lmstr
+      let lstr = lnum ==# start_lnum || empty(comment.lmstr) ? comment.lstr : comment.lmstr
 
       if start_col ==# 1
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
@@ -821,9 +811,11 @@ function! g:commentr#DoComment(...) abort range
 
       else
         exec 'normal! _'
-        let lstr = virtcol('.') < start_col ? lstr : lstr[comment.len_lmargin:]
-        exec "normal! \<Esc>" . start_col . '|i' . lstr
-
+        let lstr = virtcol('.') < start_col && virtcol('.') + 1 != virtcol('$') ? lstr : lstr[comment.len_lmargin:]
+        exec "normal! \<Esc>" . start_col . '|i' . lstr . "\<C-G>u"
+      endif
+      if lnum ==# start_lnum
+        let curpos = [lnum, col("']")]
       endif
     endif
 
@@ -839,9 +831,6 @@ function! g:commentr#DoComment(...) abort range
     let start_rwhite = matchstrpos(comment.rstr, '\m\C\s*$')[1]
     let rstr_rtrim = strpart(comment.rstr, 0, start_rwhite)
 
-    let old_virtedit=&virtualedit
-    set virtualedit=all
-
     if ralign ==# '|'
       let needed_width = max_width
     elseif ralign ==# 'I'
@@ -856,10 +845,14 @@ function! g:commentr#DoComment(...) abort range
       call cursor(lnum, 1)
       exec "normal! " . (virtcol('$') < needed_width : needed_width . '|a' : 'A') . rstr_rtrim
     endfor
-
-    let &virtualedit=old_virtedit
   endif
-  exec start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
+
+  let &virtualedit=old_virtedit
+
+  if !empty(comment.rstr) || mode !=# 'i'
+    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
+  endif
+  call cursor(curpos)
 endfunction " 4}}}
 
 " Uncommenting {{{3
@@ -968,23 +961,23 @@ function! g:commentr#DoUncomment(...) abort range
       endfor
 
       if has_lmstr
-        exec cstart_lnum . ',' . cend_lnum . 's/' . escape(nextcomment.lmpat, '/') . '//e'
+        exec 'silent keeppattern ' . cstart_lnum . ',' . cend_lnum . 's/' . escape(nextcomment.lmpat, '/') . '//e'
       endif
 
     endif
 
     if range_type !=# 'block'
       for [pat, sub] in nextcomment.unescss
-        exec '%s/' . s:computeRegexpRange(cstart_lnum, cstart_col, cend_lnum, cend_col) .
+        exec 'silent keeppattern %s/' . s:computeRegexpRange(cstart_lnum, cstart_col, cend_lnum, cend_col) .
           \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
       endfor
     endif
 
     if cend_col !=# 2147483647
-      exec cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
+      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
     endif
 
-    exec cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
+    exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
 
     let Trimmer = {_, line-> trim(line)}
     let [header_start, header_end] = [cstart_lnum, cstart_lnum + len(nextcomment.header) - 1]
