@@ -814,7 +814,7 @@ function! g:commentr#DoComment(...) abort range
 
       if start_col ==# 1
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
-          exec "normal! \<Esc>0i" . lstr[comment.len_lmargin:]
+          exec "normal! 0i" . lstr[comment.len_lmargin:]
         elseif lalign ==# '_'
           exec "normal! \<Esc>I" . lstr[comment.len_lmargin:]
         elseif lalign ==# '|'
@@ -822,7 +822,7 @@ function! g:commentr#DoComment(...) abort range
         endif
 
       else
-        exec 'normal! \<Esc>_'
+        exec 'normal! _'
         let lstr = virtcol('.') < start_col ? lstr : lstr[comment.len_lmargin:]
         exec "normal! \<Esc>" . start_col . '|i' . lstr
 
@@ -997,7 +997,7 @@ function! g:commentr#DoUncomment(...) abort range
       exec cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
     endif
 
-    exec cstart_lnum . 's/\m\(' . (range_type !=# 'block' ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
+    exec cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
 
     let Trimmer = {_, line-> trim(line)}
     let [header_start, header_end] = [cstart_lnum, cstart_lnum + len(nextcomment.header) - 1]
