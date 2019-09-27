@@ -29,7 +29,7 @@ command -range -nargs=? ToggleComment if mode() ==# 'n'
 
 " SECTION: Variables {{{2
 if !has_key(g:, 'commentr_bindings')
-  let g:commentr_bindings = { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+[' }
+  let g:commentr_bindings = { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+0[' }
 endif
 if !empty(g:commentr_bindings)
   if !hasmapto('<Plug>(CommentrComment)')

@@ -70,7 +70,7 @@ function! s:getConfig(flags) abort
     \   ['group',          '^([a-zA-Z*])',     '*'],
     \   ['force_linewise', '^[a-zA-Z*]?\=',    0],
     \   ['force_linewise', '^[A-Z]',           0],
-    \   ['allow_lmstr',    '\+.\d*[',          0],
+    \   ['allow_lmstr',    '\+.?\d*[',         0],
     \   ['lalign',         '([0_|])\d*[',      '|'],
     \   ['lmargin',        '(\d+)[',           1],
     \   ['lpadding',       '[(\d+)',           1],
@@ -139,6 +139,13 @@ function! s:isPlainText(s) abort
   catch
     return 0
   endtry
+endfunction
+
+function s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col)
+  return '\m\(\%' . a:start_lnum . 'l\%>' . (a:start_col - 1) . 'v' . (a:start_lnum ==# a:end_lnum && a:end_col !=# 2147483647 ? '\%<' . a:end_col . 'v' : '') .
+    \ '\|\%>' . a:start_lnum . 'l\%<' . a:end_lnum . 'l' .
+    \ '\|\%' . a:end_lnum . 'l' . (a:end_col !=# 2147483647 ? '\%<' . a:end_col . 'v' : '') . (a:start_lnum ==# a:end_lnum ? '\%>' . a:start_col . 'v' : '') .
+    \ '\)'
 endfunction
 
 " Purpose: Get suitable comments for config.
@@ -480,9 +487,14 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
     " Reset state of three-piece comment.
     if flags !~# '\m\C[me]'
       let sme = {}
+      let sme.indent = 0
     endif
 
     if flags =~# '\m\C[sme]'
+      if flags =~# '\C[se]' && !empty(digits)
+        let sme.indent = digits
+      endif
+
       let sme[matchstr(flags, '\m\C[sme]')] = string
       let sme[matchstr(flags, '\m\C[sme]') . 'a'] = stridx(flags, 'r') !=# -1 ? 'r' : 'l'
     endif
@@ -497,11 +509,17 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
         \ && trim(comment.lstr, ' ') ==# trim(sme.s, ' ')
         \ && trim(comment.rstr, ' ') ==# trim(sme.e, ' ')
           if has_key(sme, 'm')
-            let comment.lmstr = ' ' . sme.m
+            let comment.lmstr = sme.m
           endif
           let found = 1
         endif
       endfor
+
+      let indent = repeat(' ', sme.indent)
+      " let comment.rstr = indent . comment.rstr
+      if has_key(comment, 'lmstr')
+        let comment.lmstr = indent . comment.lmstr
+      endif
 
       " TODO: Do something if not found because it shouldn't happen.
     endif
@@ -515,7 +533,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
       let comment.rmstr = ''
     endif
     let comment.rmpat = '\m\C\s*\V' . escape(comment.rmstr, '\')
-    let comment.lmpat = '\m\C\s*\V' . escape(comment.lmstr, '\')
+    let comment.lmpat = '\m\C^\s*\V' . escape(comment.lmstr, '\')
   endfor
 
   return comments
@@ -573,14 +591,10 @@ function! g:commentr#OpComment(mode) abort
 endfunction " 4}}}
 
 " Purpose: Comment out a range of text.
-" Args:
-"   - [flags]: TODO: Document.
 function! g:commentr#DoComment(...) abort range
   " {{{4
   let flags = get(a:, 1, '')
   let [cfg, comments] = s:getComments(flags)
-
-  silent! call repeat#set(':Comment ' . escape(flags, '\') . "\<CR>")
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
@@ -745,147 +759,102 @@ function! g:commentr#DoComment(...) abort range
     endif
   endif
 
+  if range_type ==# 'block'
+    exec 'normal! A' . comment.rstr
+    exec 'normal! gvI' . comment.lstr
+    exec start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
+    " No escape in block mode, because:
+    " a) Handling visual mode to eof is more important,
+    " b) What should we really escape?
+    return
+  endif
+
+  for [pat, sub] in comment.escss
+    exec '%s/' . s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col) .
+      \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
+  endfor
+
   for lnum in range(start_lnum, end_lnum)
-    let line = getline(lnum)
-
-    let com_start = lnum !=# start_lnum && range_type !=# 'block' ? 1          : start_col
-    let com_end   = lnum !=# end_lnum   && range_type !=# 'block' ? 2147483647 : end_col
-
-    " Note: com_{start,end} uses screen column indexes.
-    let lline = strcharpart(line, 0, com_start - 1)
-    let mline = strcharpart(line, com_start - 1, com_end - com_start + 1)
-    let rline = strcharpart(line, com_end)
-
-    let mline = comment.escape(mline)
+    call cursor(lnum, 1)
 
     if range_type ==# 'char'
       let need_start  = lnum ==# start_lnum || comment.rstr ==# '' || (range_type ==# 'block' && comment.rstr !=# '' && start_col !=# 1)
       let need_end    = lnum ==# end_lnum || (range_type ==# 'block' && comment.rstr !=# '' && start_col !=# 1)
-      let need_lmiddle = (!need_end || trim(mline) !=# '') && start_col ==# 1 && end_col ==# 2147483647 && comment.lmstr !=# ''
+      let need_end = need_end && !will_com_after
+" (!need_end || trim(mline) !=# '')
+      let need_lmiddle = (!need_end) && start_col ==# 1 && end_col ==# 2147483647 && comment.lmstr !=# ''
     else
       let need_start  = 1
       let need_lmiddle = start_col ==# 1 && comment.lmstr !=# ''
       let need_end    = 1
     endif
-    let need_rmiddle = 1
+    let need_rmiddle = 0
+
+    if need_end || need_rmiddle
+      " FIXME: Use proper rmargin
+      let rstr = need_end ? comment.rstr : comment.rmstr
+      if end_col ==# 2147483647
+        if ralign ==# '$'
+          exec "normal! \<Esc>A" . rstr[:-(comment.len_rmargin + 1)]
+        elseif ralign ==# '<'
+          exec "normal! \<Esc>g_" . rstr[:-(comment.len_rmargin + 1)]
+        endif
+
+      else
+        exec 'normal! g_'
+        let rstr = virtcol('.') > end_col ? rstr : rstr[:-(comment.len_rmargin + 1)]
+        exec "normal! \<Esc>" . end_col . '|a' . rstr
+
+      endif
+    endif
 
     if need_start || need_lmiddle
+      " FIXME: Use proper lmargin
       let lstr = need_start ? comment.lstr : comment.lmstr
 
       if start_col ==# 1
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
-          " Do nothing.
+          exec "normal! \<Esc>0i" . lstr[comment.len_lmargin:]
         elseif lalign ==# '_'
-          let lwhite_end = matchstrpos(mline, '\m\C^\s*')[2]
-          let lline = strpart(mline, 0, lwhite_end)
-          let mline = strpart(mline, lwhite_end)
+          exec "normal! \<Esc>I" . lstr[comment.len_lmargin:]
         elseif lalign ==# '|'
-          " Note: Lines up to `min_width_lwhite` contains only
-          " single-width white characters.
-
-          let width = 0 " Width of white prefix.
-          let len = min_width_lwhite " Length of white prefix.
-
-          while 1
-            let prev_width = width " Width of previously examined white prefix.
-            let lline = strpart(mline, 0, len)
-            let width = strdisplaywidth(lline)
-            if min_width_lwhite >=# width
-              break
-            endif
-
-            let len -= 1
-          endwhile
-
-          if min_width_lwhite ==# width
-            " Comment is inserted at character border.
-            let mline = strpart(mline, len)
-          elseif width ># 0
-            " Need to break tabs apart.
-            "          /min_width_lwhite
-            "         V
-            " | | |\t      | | |
-            "     ^- width ^- prev_width
-
-            let lline .= repeat(' ', min_width_lwhite - width)
-            let mline = repeat(' ', prev_width - min_width_lwhite) . strpart(mline, len)
-          else
-            let lline = min_lwhite
-          endif
-
+          exec "normal! \<Esc>" . min_width_lwhite . '|a' . lstr[comment.len_lmargin:]
         endif
-      endif
 
-      " If whitespace is required before or after comment delimiters, but one
-      " is already there, don't insert another one.
-      " | // ...| => |// ...|
-      if need_start && lline !~# '\S'
-        let lstr = strpart(lstr, comment.len_lmargin)
-      endif
-      " |    // | => |    //|
-      if empty(mline) && mode !=# 'i'
-        let lstr = lstr[:-1 - comment.len_lpadding]
-      endif
-
-      let mline = lstr . mline
-      if !exists('first_curpos')
-        " Note: Needs byte offset.
-        let first_curpos = [lnum, strlen(lline) + strlen(lstr) + 1]
-      endif
-    endif
-
-    if need_end || need_rmiddle
-      let rstr = need_end ? comment.rstr : comment.rmstr
-
-      let skip_rcom = 0
-      if end_col ==# 2147483647 && (range_type ==# 'block' && rstr !=# '')
-
-        if ralign ==# '$'
-          " Do nothing.
-        else
-          let start_rwhite = matchstrpos(mline, '\m\C\s*$')[1]
-          let mline = strpart(mline, 0, start_rwhite)
-          if ralign ==# '<'
-            " Do nothing.
-          else
-            let skip_rcom = 1
-          endif
-        endif
-      endif
-
-      if !exists('last_curpos')
-        " Note: Needs byte offset.
-        let last_curpos = [lnum, strlen(lline) + strlen(mline) + (&selection ==# 'exclusive')]
-      endif
-
-      if mline ==# '' && need_end
-        let rstr = strpart(rstr, comment.len_rpadding)
-      endif
-
-      if rline ==# ''
-        if !will_com_after
-          let start_rwhite = matchstrpos(rstr, '\m\C\s*$')[1]
-          let mline .= strpart(rstr, 0, start_rwhite)
-        endif
       else
-        let mline .= rstr
+        exec 'normal! \<Esc>_'
+        let lstr = virtcol('.') < start_col ? lstr : lstr[comment.len_lmargin:]
+        exec "normal! \<Esc>" . start_col . '|i' . lstr
+
       endif
     endif
 
-    let new_line = lline . mline . rline
-    let new_line_width = strdisplaywidth(new_line)
-    if max_width <# new_line_width
-      let max_width = new_line_width
-    endif
+    " Block
+    " else
+    "   exec 'normal! ' . start_col . '|m<' . end_col . '|m>'
+    "   exec '%s/\m\%''>' . (&selection ==# 'inclusive' ? '.\zs' : '') . '/' . escape(comment.rstr, '/') . '/e'
+    "   for [pat, sub] in comment.escss
+    "     exec '%s/\m\%>''<\(\%<''>' . (&selection ==# 'inclusive' ? '\|\%''>' : '') . '\)' . escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
+    "   endfor
 
-    if new_line !=# line
-      call setline(lnum, new_line)
+    "   " Note: Marks are not updated, so order matters.
+    "   exec '%s/\m\%''</' . escape(comment.lstr, '/') . '/e'
+    " endif
+
+    if will_com_after
+      let new_line_width = virtcol('$')
+      if max_width <# new_line_width
+        let max_width = new_line_width
+      endif
     endif
   endfor
 
   if will_com_after
     let start_rwhite = matchstrpos(comment.rstr, '\m\C\s*$')[1]
     let rstr_rtrim = strpart(comment.rstr, 0, start_rwhite)
+
+    let old_virtedit=&virtualedit
+    set virtualedit=all
 
     if ralign ==# '|'
       let needed_width = max_width
@@ -898,29 +867,11 @@ function! g:commentr#DoComment(...) abort range
     endif
 
     for lnum in range(start_lnum, end_lnum)
-      let line = getline(lnum)
-      let width_line = strdisplaywidth(line)
-
-      if !exists('last_curpos')
-        let last_curpos = [lnum, width_line + 1]
-      endif
-
-      let diff = needed_width - width_line
-      let line .= repeat(' ', diff) . rstr_rtrim
-
-      call setline(lnum, line)
+      call cursor(lnum, 1)
+      exec "normal! " . (virtcol('$') < needed_width : needed_width . '|a' : 'A') . rstr_rtrim
     endfor
-  endif
 
-  if mode ==# 'i'
-    call cursor(first_curpos)
-  elseif mode ==? 'v' || mode ==? 's'
-    exe "normal! \<ESC>"
-    call cursor(first_curpos)
-    exe "normal! " . mode
-    call cursor(last_curpos)
-  elseif mode ==# "\<C-V>" || mode ==# "\<C-S>"
-    exe "normal! \<ESC>"
+    let &virtualedit=old_virtedit
   endif
 endfunction " 4}}}
 
@@ -948,8 +899,6 @@ function! g:commentr#DoUncomment(...) abort range
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
-
-  silent! call repeat#set(':Uncomment' . escape(flags, '\') . "\<CR>")
 
   let [start_lnum, start_col, end_lnum, end_col, range_type] =
     \ s:computeRange(mode, cfg.force_linewise, a:firstline, a:lastline)
@@ -1030,68 +979,25 @@ function! g:commentr#DoUncomment(...) abort range
           break
         endif
       endfor
+
+      if has_lmstr
+        exec cstart_lnum . ',' . cend_lnum . 's/' . escape(nextcomment.lmpat, '/') . '//e'
+      endif
+
     endif
 
-    for lnum in range(cstart_lnum, cend_lnum)
-      let line = getline(lnum)
-      call cursor(lnum, lnum ==# cstart_lnum ? cstart_col : 1)
+    if range_type !=# 'block'
+      for [pat, sub] in nextcomment.unescss
+        exec '%s/' . s:computeRegexpRange(cstart_lnum, cstart_col, cend_lnum, cend_col) .
+          \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
+      endfor
+    endif
 
-      if lnum ==# cstart_lnum
-        let lcom_start = cstart_col - 1
-        let lcom_len = len(matchstr(line, nextcomment.lpat, lcom_start))
-        let lcom_len_lpad = nextcomment.len_lpadding
-        let lcom_len_lmargin = nextcomment.len_lmargin
-      elseif has_lmstr
-        let lcom_start = searchpos(nextcomment.lmpat, "cWn", lnum)[1] - 1
-        if lcom_start >=# 0
-          let lcom_len = strlen(nextcomment.lmstr)
-        else
-          let lcom_start = 0
-          let lcom_len = 0
-        endif
-        let lcom_len_lpad = 0
-        let lcom_len_lmargin = 0
-      else
-        let lcom_start = 0
-        let lcom_len = 0
-        let lcom_len_lpad = 0
-        let lcom_len_lmargin = 0
-      endif
+    if cend_col !=# 2147483647
+      exec cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
+    endif
 
-      if lnum ==# cend_lnum
-        let rcom_start = cend_col - 1
-        let rcom_len = len(matchstr(line, nextcomment.rpat, lcom_start))
-      else
-        let rcom_start = 2147483647
-        let rcom_len = 0
-      endif
-
-      " FIXME: Convert spaces to tabs.
-      " Note: c{start,end} uses column indexes.
-      let lline = strpart(line, 0, lcom_start)
-      let mline = strpart(line, lcom_start + lcom_len, rcom_start - lcom_start - lcom_len)
-      let rline = strpart(line, rcom_start + rcom_len)
-
-      if lline !~# '\S'
-        let lcom_len_lmargin = 0
-      endif
-
-      let lline = strpart(lline, 0, matchstrpos(lline, '\m\C\s\{,' . lcom_len_lmargin . '}$')[1])
-      let mstart = matchstrpos(mline, '\m\C^\s\{,' . lcom_len_lpad . '}')[2]
-      let mend = matchstrpos(mline, '\m\C\s\{,' . nextcomment.len_rpadding . '}$')[1]
-      let mline = strpart(mline, mstart, mend - mstart)
-      let rline = strpart(rline, matchstrpos(rline, '\m\C^\s\{,' . nextcomment.len_rmargin . '}\zs')[1])
-
-      let mline = comment.unescape(mline)
-
-      let new_line = lline . mline . rline
-      let start_rwhite = matchstrpos(new_line, '\m\C\s*$')[1]
-      let new_line = strpart(new_line, 0, start_rwhite)
-
-      if new_line !=# line
-        call setline(lnum, new_line)
-      endif
-    endfor
+    exec cstart_lnum . 's/\m\(' . (range_type !=# 'block' ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
 
     let Trimmer = {_, line-> trim(line)}
     let [header_start, header_end] = [cstart_lnum, cstart_lnum + len(nextcomment.header) - 1]
