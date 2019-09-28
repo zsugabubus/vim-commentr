@@ -791,7 +791,7 @@ function! g:commentr#DoComment(...) abort range
         endif
 
       else
-        exec "normal! \<Esc>" . end_col . '|a' . rstr
+        exec "normal! \<Esc>" . end_col . (virtcol('$') > end_col ? '|a' : '|i') . rstr
 
       endif
     endif
