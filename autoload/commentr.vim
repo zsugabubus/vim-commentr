@@ -966,18 +966,22 @@ function! g:commentr#DoUncomment(...) abort range
 
     endif
 
+    if cend_col !=# 2147483647
+      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
+    endif
+
     if range_type !=# 'block'
+      " FIXME: It can unescape not commented text because range is not
+      " f*cking changing. */
       for [pat, sub] in nextcomment.unescss
         exec 'silent keeppattern %s/' . s:computeRegexpRange(cstart_lnum, cstart_col, cend_lnum, cend_col) .
           \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
       endfor
     endif
 
-    if cend_col !=# 2147483647
-      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
-    endif
-
     exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
+
+    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
 
     let Trimmer = {_, line-> trim(line)}
     let [header_start, header_end] = [cstart_lnum, cstart_lnum + len(nextcomment.header) - 1]
