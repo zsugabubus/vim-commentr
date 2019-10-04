@@ -151,8 +151,8 @@ endfunction
 " Purpose: Get suitable comments for config.
 function! s:getComments(flags) abort
   " {{{3
-  if !has_key(b:, 'commentr_cache')
-    let b:commentr_cache = []
+  if !has_key(g:, 'commentr_cache')
+    let g:commentr_cache = []
   endif
 
   let synstack = synstack(line('.'), col('.'))
@@ -160,6 +160,7 @@ function! s:getComments(flags) abort
   let tokenlist = map(synstack, {_, synname-> map(split(synname, '\m\C\ze[A-Z]'), 'tolower(v:val)')})
   let tokenlist = add(reverse(tokenlist), [&ft])
   let noluck = copy(get(b:, 'commentr_ft_nosynguess', []))
+  let currbuf = bufnr("%")
 
   function! s:esunescape(text)
     return substitute(substitute(a:text, '\v\\(.)', '\1', 'g'), ',', '\,', 'g')
@@ -178,12 +179,11 @@ function! s:getComments(flags) abort
       try
         call setbufvar(dummybuf, '&buftype', 'scratch')
         call setbufvar(dummybuf, '&ft', synft)
-        call setbufvar(dummybuf, '&syntax', 'ON')
         let did_ftplugin = !empty(getbufvar(dummybuf, 'did_ftplugin'))
         let current_syntax = getbufvar(dummybuf, 'current_syntax')
 
         if did_ftplugin || !empty(current_syntax)
-          for entry in b:commentr_cache
+          for entry in g:commentr_cache
             if entry.ft ==# synft
             \  && entry.flags ==# a:flags
               return [deepcopy(entry.cfg), deepcopy(entry.commentr)]
@@ -194,8 +194,12 @@ function! s:getComments(flags) abort
 
           " Syntax guess.
           if empty(commentstring) && !empty(current_syntax)
+            call setbufvar(dummybuf, '&syntax', 'ON')
             call setbufvar(dummybuf, '&buflisted', '1')
+
             exec dummybuf . 'bufdo redir => b:commentr_synlist | silent syn list | redir END'
+            exec 'buffer ' . currbuf
+
             call setbufvar(dummybuf, '&buflisted', '0')
             let groupinfo = split(getbufvar(dummybuf, 'commentr_synlist'), '\n')[1:]
 
@@ -251,9 +255,6 @@ function! s:getComments(flags) abort
             \   a:flags
             \ ])
 
-          exec dummybuf . 'bwipeout'
-          unlet! dummybuf
-
           if empty(commentstring)
             continue
           endif
@@ -265,14 +266,14 @@ function! s:getComments(flags) abort
             \   'commentr': s:parseCommentstring(cfg, commentstring, comments)
             \ }
 
-          call insert(b:commentr_cache, entry)
+          call insert(g:commentr_cache, entry)
           return [deepcopy(cfg), deepcopy(entry.commentr)]
         endif
 
       catch
-        if exists('dummybuf')
-          exec dummybuf . 'bwipeout'
-        endif
+        throw 'commentr: ' . v:exception
+      finally
+        exec dummybuf . 'bwipeout'
       endtry
 
     endfor
