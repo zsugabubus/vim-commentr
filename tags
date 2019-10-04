@@ -31,7 +31,8 @@ commentr#OpUncomment	autoload/commentr.vim	/^function! g:commentr#OpUncomment(mo
 commentr#ToggleCommentMotion	autoload/commentr.vim	/^function! g:commentr#ToggleCommentMotion(flags)$/;"	f
 commentr#UncommentMotion	autoload/commentr.vim	/^function! g:commentr#UncommentMotion(...) abort range$/;"	f
 doc/tags	Makefile	/^doc\/tags: doc\/commentr.txt$/;"	t
-g:commentr_bindings	plugin/commentr.vim	/^  let g:commentr_bindings = { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+[' }$/;"	v
+g:commentr_bindings	plugin/commentr.vim	/^  let g:commentr_bindings = { 'c': '', 'C': 'C', 'ct': 't', 'cd': 'd', 'cm': 'm', 'cx': 'C+0[' }$/;"	v
+g:commentr_cache	autoload/commentr.vim	/^    let g:commentr_cache = []$/;"	v
 g:commentr_mode_override	autoload/commentr.vim	/^  let g:commentr_mode_override = a:mode$/;"	v
 g:commentr_op_group	autoload/commentr.vim	/^  let g:commentr_op_group = a:flags$/;"	v
 g:commentr_op_group	autoload/commentr.vim	/^  let g:commentr_op_group = get(a:, 1, '')$/;"	v
@@ -40,12 +41,14 @@ helptags	Makefile	/^helptags: doc\/tags$/;"	t
 s:c_commentstring	autoload/commentr.vim	/^let s:c_commentstring =$/;"	v
 s:ccmd	plugin/commentr.vim	/^    let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'$/;"	v
 s:computeRange	autoload/commentr.vim	/^function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort$/;"	f
+s:computeRegexpRange	autoload/commentr.vim	/^function s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col)$/;"	f
 s:esunescape	autoload/commentr.vim	/^  function! s:esunescape(text)$/;"	f
 s:flags	plugin/commentr.vim	/^    let s:flags = escape(s:flags, '\\"')$/;"	v
 s:getComments	autoload/commentr.vim	/^function! s:getComments(flags) abort$/;"	f
 s:getConfig	autoload/commentr.vim	/^function! s:getConfig(flags) abort$/;"	f
 s:html_commentstrng	autoload/commentr.vim	/^let s:html_commentstrng = '<!--%s-->,,x\/&\/&amp;\/x\/--\/&#45;&#45;\/'$/;"	v
 s:isCommentedAt	autoload/commentr.vim	/^function! s:isCommentedAt(lnum, col) abort$/;"	f
+s:isPlainText	autoload/commentr.vim	/^function! s:isPlainText(s) abort$/;"	f
 s:parseCommentstring	autoload/commentr.vim	/^function! s:parseCommentstring(cfg, commentstring, comments) abort$/;"	f
 s:poscmp	autoload/commentr.vim	/^function! s:poscmp(one, other) abort$/;"	f
 s:save_cpo	autoload/commentr.vim	/^let s:save_cpo = &cpo$/;"	v
