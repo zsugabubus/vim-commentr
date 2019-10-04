@@ -950,6 +950,10 @@ function! g:commentr#DoUncomment(...) abort range
     let [cstart_lnum, cstart_col] = nextcomment.nextstart
     let [cend_lnum, cend_col] = nextcomment.nextend
 
+    if cend_col !=# 2147483647
+      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
+    endif
+
     let has_lmstr = nextcomment.lmstr !=# ''
     if has_lmstr
       " Don't check first and last lines.
@@ -964,11 +968,6 @@ function! g:commentr#DoUncomment(...) abort range
       if has_lmstr
         exec 'silent keeppattern ' . cstart_lnum . ',' . cend_lnum . 's/' . escape(nextcomment.lmpat, '/') . '//e'
       endif
-
-    endif
-
-    if cend_col !=# 2147483647
-      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
     endif
 
     if range_type !=# 'block'
