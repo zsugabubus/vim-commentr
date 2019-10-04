@@ -803,7 +803,7 @@ function! g:commentr#DoComment(...) abort range
 
       if start_col ==# 1
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
-          exec "normal! 0i" . lstr[comment.len_lmargin:]
+          exec "normal! \<Esc>0i" . lstr[comment.len_lmargin:]
         elseif lalign ==# '_'
           exec "normal! \<Esc>I" . lstr[comment.len_lmargin:]
         elseif lalign ==# '|'
