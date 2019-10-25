@@ -721,6 +721,15 @@ function! g:commentr#DoComment(...) abort range
     throw "commentr: cannot comment region"
   endif
 
+  let old_autoindent=&autoindent
+  let old_cindent=&cindent
+  let old_smartindent=&smartindent
+  let old_indentexpr=&indentexpr
+  let &autoindent=0
+  let &cindent=0
+  let &smartindent=0
+  let &indentexpr=''
+
   " Rank comments.
   " TODO: Use some advanced A.I. here.
   if cfg.force_linewise
@@ -848,6 +857,10 @@ function! g:commentr#DoComment(...) abort range
     endfor
   endif
 
+  let &autoindent=old_autoindent
+  let &cindent=old_cindent
+  let &smartindent=old_smartindent
+  let &indentexpr=old_indentexpr
   let &virtualedit=old_virtedit
 
   if !empty(comment.rstr) || mode !=# 'i'
