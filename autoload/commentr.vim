@@ -168,7 +168,7 @@ function! s:getComments(flags) abort
 
   for tokens in tokenlist
     " Try compose a valid 'ft' from tokens. Go from longest to shortest.
-    for i in range(len(tokens), 1, -1)
+    for i in range(len(tokens), 0, -1)
       let synft = join(tokens[:i], '')
       if index(noluck, synft) !=# -1
         continue
