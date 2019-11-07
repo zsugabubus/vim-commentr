@@ -44,7 +44,7 @@ if !empty(g:commentr_bindings)
     let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'
 
     exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
-    exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . 'c commentr#ToggleCommentMotion("") . "V0"'
+    exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . 'c commentr#ToggleCommentMotion("' . s:flags . '") . "V0"'
 
     if s:flags !~# '\v([A-Z]|\=)'
       exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'A A' . s:ccmd
