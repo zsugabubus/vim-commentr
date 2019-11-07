@@ -17,9 +17,9 @@ command -range -nargs=? Comment if mode() ==# 'n'
   \ |   keepjumps call commentr#DoComment(<f-args>)
   \ | endif
 command -range -nargs=? Uncomment
-  \ |   keepjumps <line1>,<line2>call commentr#DoUnomment(<f-args>)
+  \ |   keepjumps <line1>,<line2>call commentr#DoUncomment(<f-args>)
   \ | else
-  \ |   keepjumps call commentr#DoUnomment(<f-args>)
+  \ |   keepjumps call commentr#DoUncomment(<f-args>)
   \ | endif
 command -range -nargs=? ToggleComment if mode() ==# 'n'
   \ |   keepjumps <line1>,<line2>call commentr#Do{commentr#IsCommented() ? 'Uncomment' : 'Comment'}(<f-args>)
