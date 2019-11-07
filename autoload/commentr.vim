@@ -527,18 +527,33 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
   endfor
 
   for comment in comments
-    if !has_key(comment, 'lmstr')
+    if !has_key(comment, 'lmstr') || !a:cfg.allow_lmstr
       let comment.lmstr = ''
     endif
-    if !has_key(comment, 'rmstr')
+    if !has_key(comment, 'rmstr') || !a:cfg.allow_rmstr
       let comment.rmstr = ''
     endif
-    let comment.rmpat = '\m\C\s*\V' . escape(comment.rmstr, '\')
-    let comment.lmpat = '\m\C^\s*\V' . escape(comment.lmstr, '\')
+    " Trailing whitespace is optional.
+    let comment.lmpat = '\m\C^\s*\V' . substitute(escape(comment.lmstr, '\'), '\v(\s+)$', '\\m\\%(\1\\|\\s*$\\)', '')
+    let comment.rmpat = '\m\C\s*\V'  . substitute(escape(comment.rmstr, '\'), '\v(\s+)$', '\\m\\%(\1\\|\\s*$\\)', '')
   endfor
 
   return comments
 endfunction " 3}}}
+
+" Purpose: Set Vim options that hopefully won't break things.
+function! s:setVimOptions() abort
+  let s:old_virtedit=&virtualedit
+  let s:old_paste=&paste
+  set virtualedit=all
+  set paste
+endfunction
+
+" Purpose: Restore previously set Vim options.
+function! s:restoreVimOptions() abort
+  let &paste=s:old_paste
+  let &virtualedit=s:old_virtedit
+endfunction
 
 " SECTION: Global functions {{{2
 " Purpose: Checks if cursor or the passed position is in or near of a
@@ -721,14 +736,7 @@ function! g:commentr#DoComment(...) abort range
     throw "commentr: cannot comment region"
   endif
 
-  let old_autoindent=&autoindent
-  let old_cindent=&cindent
-  let old_smartindent=&smartindent
-  let old_indentexpr=&indentexpr
-  let &autoindent=0
-  let &cindent=0
-  let &smartindent=0
-  let &indentexpr=''
+  call s:setVimOptions()
 
   " Rank comments.
   " TODO: Use some advanced A.I. here.
@@ -741,10 +749,6 @@ function! g:commentr#DoComment(...) abort range
     endfor
   else
     let comment = comments[0]
-  endif
-
-  if !cfg.allow_lmstr
-    let comment.lmstr = ''
   endif
 
   let [lalign, ralign] = [cfg.lalign, cfg.ralign]
@@ -783,9 +787,6 @@ function! g:commentr#DoComment(...) abort range
     exec 'silent keeppattern %s/' . s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col) .
       \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
   endfor
-
-  let old_virtedit=&virtualedit
-  set virtualedit=all
 
   for lnum in range(start_lnum, end_lnum)
     call cursor(lnum, 1)
@@ -857,11 +858,7 @@ function! g:commentr#DoComment(...) abort range
     endfor
   endif
 
-  let &autoindent=old_autoindent
-  let &cindent=old_cindent
-  let &smartindent=old_smartindent
-  let &indentexpr=old_indentexpr
-  let &virtualedit=old_virtedit
+  call s:restoreVimOptions()
 
   if !empty(comment.rstr) || mode !=# 'i'
     undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
@@ -896,6 +893,8 @@ function! g:commentr#DoUncomment(...) abort range
 
   let [start_lnum, start_col, end_lnum, end_col, range_type] =
     \ s:computeRange(mode, cfg.force_linewise, a:firstline, a:lastline)
+
+  call s:setVimOptions()
 
   while 1
     for i in range(len(comments) - 1, 0, -1)
@@ -968,9 +967,9 @@ function! g:commentr#DoUncomment(...) abort range
     endif
 
     let has_lmstr = nextcomment.lmstr !=# ''
-    if has_lmstr
+    if has_lmstr && cstart_lnum + 1 <= cend_lnum - 1
       " Don't check first and last lines.
-      for lnum in cstart_lnum >= cend_lnum + 2 ? range(cstart_lnum + 1, cend_lnum - 1) : []
+      for lnum in range(cstart_lnum + 1, cend_lnum - 1)
         call cursor(lnum, 1)
         if searchpos(nextcomment.lmpat, "cWn", lnum) ==# [0, 0]
           let has_lmstr = 0
@@ -979,7 +978,7 @@ function! g:commentr#DoUncomment(...) abort range
       endfor
 
       if has_lmstr
-        exec 'silent keeppattern ' . cstart_lnum . ',' . cend_lnum . 's/' . escape(nextcomment.lmpat, '/') . '//e'
+        exec 'silent keeppattern ' . (cstart_lnum + 1) . ',' . (cend_lnum - 1) . 's/' . escape(nextcomment.lmpat, '/') . '//e'
       endif
     endif
 
@@ -1024,6 +1023,8 @@ function! g:commentr#DoUncomment(...) abort range
 
     unlet nextcomment
   endwhile
+
+  call s:restoreVimOptions()
 
   call winrestview(winview)
 endfunction " 4}}}
