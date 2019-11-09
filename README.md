@@ -21,21 +21,6 @@ See `:help commentr`.
 
 See `:help commentr-builtin-mappings`
 
-## Why?
-
-Because other comment plugins are a mess. Really. Look at the only two,
-somewhat competitive commenter plugin that I know about:
-[nerdcommenter](https://github.com/scrooloose/nerdcommenter) and
-[tcomment](https://github.com/tomtom/tcomment_vim). Compared to them, commentr
-is clean, lightweight and flexible. I tried nerdcommenter but it has some
-serious defects for my usecase and as I remember I had poor experience with
-motion commenting. I also wanted to try tcomment, but WTF?! When I looked at
-the keybindings again WTF?! When I saw that it has separate keybindings for
-inline and block-style commenting... no, no, thanks not, I just don't care
-about it. Looking inside them, you can see they are both consist of about 2500
-lines of Vim-script. commentr is just 1000 or even less. Ask yourself what's
-that additional 1500 lines. Hacks? Workarounds?
-
 ## License
 
 Released under the GNU General Public License version v3.0 or later.
