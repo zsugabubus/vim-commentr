@@ -577,9 +577,9 @@ function! g:commentr#ToggleCommentMotion(flags)
   " {{{4
   let g:commentr_op_group = a:flags
   if !g:commentr#IsCommented()
-    let &g:opfunc = 'g:commentr#OpComment'
+    set opfunc=g:commentr#OpComment
   else
-    let &g:opfunc = 'g:commentr#OpUncomment'
+    set opfunc=g:commentr#OpUncomment
   endif
   return 'g@'
 endfunction " 4}}}
@@ -593,7 +593,7 @@ endfunction " 4}}}
 function! g:commentr#CommentMotion() abort
   " {{{4
   let g:commentr_op_group = get(a:, 1, '')
-  let &g:opfunc = 'g:commentr#OpComment'
+  set opfunc=g:commentr#OpComment
   return 'g@'
 endfunction " 4}}}
 
@@ -870,7 +870,7 @@ endfunction " 4}}}
 function! g:commentr#UncommentMotion(...) abort range
   " {{{4
   let g:commentr_op_group = get(a:, 1, '')
-  let &g:opfunc = 'g:commentr#OpUncomment'
+  set opfunc=g:commentr#OpUncomment
   return 'g@'
 endfunction " 4}}}
 
