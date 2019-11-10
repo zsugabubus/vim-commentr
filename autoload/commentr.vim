@@ -142,7 +142,7 @@ function! s:isPlainText(s) abort
 endfunction
 
 function s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col)
-  return '\m\(\%' . a:start_lnum . 'l\%>' . (a:start_col - 1) . 'v' . (a:start_lnum ==# a:end_lnum && a:end_col !=# 2147483647 ? '\%<' . a:end_col . 'v' : '') .
+  return '\m\%\(\%' . a:start_lnum . 'l\%>' . (a:start_col - 1) . 'v' . (a:start_lnum ==# a:end_lnum && a:end_col !=# 2147483647 ? '\%<' . a:end_col . 'v' : '') .
     \ '\|\%>' . a:start_lnum . 'l\%<' . a:end_lnum . 'l' .
     \ '\|\%' . a:end_lnum . 'l' . (a:end_col !=# 2147483647 ? '\%<' . a:end_col . 'v' : '') . (a:start_lnum ==# a:end_lnum ? '\%>' . a:start_col . 'v' : '') .
     \ '\)'
@@ -450,8 +450,8 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
       elseif op ==# 'S'
         call add(comment.unescss, ['\V\C' . pat, sub])
       elseif op ==# 'x'
-        call add(comment.escss,      ['\V\C' . escape(pat, '\'), escape(sub, '\&')])
-        call insert(comment.unescss, ['\V\C' . escape(sub, '\'), escape(pat, '\&')])
+        call add(comment.escss,   ['\V\C' . escape(pat, '\'), escape(sub, '\&')])
+        call add(comment.unescss, ['\V\C' . escape(sub, '\'), escape(pat, '\&')])
       else
         throw "commentr: unknown escape operator: '" . op . "'"
       endif
