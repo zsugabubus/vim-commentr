@@ -33,31 +33,31 @@ if !has_key(g:, 'commentr_bindings')
 endif
 if !empty(g:commentr_bindings)
   if !hasmapto('<Plug>(CommentrComment)')
-    map <silent> <Leader> <Plug>(CommentrComment)
+    map <Leader> <Plug>(CommentrComment)
   endif
   if !hasmapto('<Plug>(CommentrUncomment)')
-    map <silent> <Leader>cu <Plug>(CommentrUncomment)
+    map <Leader>cu <Plug>(CommentrUncomment)
   endif
 
   for [s:binding, s:flags] in items(g:commentr_bindings)
     let s:flags = escape(s:flags, '\"')
     let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'
 
-    exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
-    exec 'nmap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . 'c commentr#ToggleCommentMotion("' . s:flags . '") . "V0"'
+    exec 'nnoremap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
+    exec 'nnoremap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . 'c commentr#ToggleCommentMotion("' . s:flags . '") . "V0"'
 
     if s:flags !~# '\v([A-Z]|\=)'
-      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'A A' . s:ccmd
-      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'I I' . s:ccmd
-      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'o o' . s:ccmd
-      exec 'nmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'O O' . s:ccmd
+      exec 'nnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'A A' . s:ccmd
+      exec 'nnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'I I' . s:ccmd
+      exec 'nnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'o o' . s:ccmd
+      exec 'nnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'O O' . s:ccmd
     endif
-    exec 'vmap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'c ' . s:ccmd
+    exec 'vnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'c ' . s:ccmd
   endfor
 
-  exec 'nmap <unique> <silent> <expr> <Plug>(CommentrUncomment)' . ' commentr#UncommentMotion("*=")'
-  exec 'nmap <unique> <silent> <Plug>(CommentrUncomment)' . 'u <Cmd>Uncomment<CR>'
-  exec 'vmap <unique> <silent> <Plug>(CommentrUncomment)' . ' <Cmd>Uncomment<CR>'
+  exec 'nnoremap <unique> <silent> <expr> <Plug>(CommentrUncomment)' . ' commentr#UncommentMotion("*=")'
+  exec 'nnoremap <unique> <silent> <Plug>(CommentrUncomment)' . 'u <Cmd>Uncomment<CR>'
+  exec 'vnoremap <unique> <silent> <Plug>(CommentrUncomment)' . ' <Cmd>Uncomment<CR>'
 endif
 
 " SECTION: Cleanup-Boilerplate {{{1
