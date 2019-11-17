@@ -79,7 +79,7 @@ Examples: >
 If you wish to add custom keybindings, see |commentr-commands| and
 |commentr-functions| for examples.
 
-List of plugin keys:				*commentr-keys*
+List of plugin keys:					*commentr-keys*
 
 <Plug>(CommentrComment)
 		Used for keybindings that toggles comments.
@@ -87,10 +87,11 @@ List of plugin keys:				*commentr-keys*
 <Plug>(CommentrUncomment)
 		Used for keybindings that uncomment text.
 
+							*commentr-gcc*
 Example: >
-	nmap gc <Plug>(CommentrComment)
-	nmap gcu <Plug>(CommentrUncomment)
-<	Change prefix of default mappings only in normal mode.
+	map g <Plug>(CommentrComment)
+	map gu <Plug>(CommentrUncomment)
+<	Change prefix of default mappings.
 
 List of builtin mappings:			*commentr-builtin-mappings*
 
