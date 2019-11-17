@@ -60,83 +60,74 @@ commentr#ToggleCommentMotion({flags})	*commentr#ToggleCommentMotion()*
 CONFIGURATION					*commentr-configuration*
 
 ------------------------------------------------------------------------------
-							*g:commentr_bindings*
+							*commentr_bindings*
 Map keybindings to |commentr-flags|. The |Dictionary| shall contain items
-in "binding": "flags" format. for what "flags" can
+in "binding": "flags" format.
 
 	{binding}	Any valid {lhs} for |:map|.
-			Used like: >
-				map <Plug>(CommentrComment){binding} ...
-<
 	{flags}		See |commentr-flags|
 
-To disable builtin mappings just use "{}".
-
-Examples: >
-	{ 'c': '', 'cm': 'm', 'c<Space>': 'DDD' }
-	{ 'c': '', 'ct': 'a' }
+Default value: >
+	let commentr_bindings = {
+	  'c': '',     " Default commenting style
+	  'C': 'C',    " Force line-wise commenting
+	  'cd': 'd',   " Documentation comments
+	  'cm': 'm',   " Module comments
+	  'cx': 'C+0[' " Sexy comments
+	}
+<To disable builtin mappings: >
+	let commentr_bindings = {}
 <
 If you wish to add custom keybindings, see |commentr-commands| and
 |commentr-functions| for examples.
 
-List of plugin keys:					*commentr-keys*
+							*commentr_leader*
+<CommentrLeader> is replaced with the string value of "g:commentr_leader"
+variable. If unset, "<Leader>" is used.
 
-<Plug>(CommentrComment)
-		Used for keybindings that toggles comments.
-
-<Plug>(CommentrUncomment)
-		Used for keybindings that uncomment text.
-
-							*commentr-gcc*
 Example: >
-	map g <Plug>(CommentrComment)
-	map gu <Plug>(CommentrUncomment)
-<	Change prefix of default mappings.
+	let commentr_leader = 'g'
+<	Use "gcc" to toggle comments for a single line.
 
-List of builtin mappings:			*commentr-builtin-mappings*
+						*commentr_uncomment_map*
+<CommentrUncommentMap> is replaced with the string value of
+"g:commentr_uncomment_map" variable. If unset, "<Leader>cu" is used.
 
 |Normal-mode| mappings:
 
-<Plug>(CommentrComment){binding}{motion}
+<CommentrLeader>{binding}{motion}
 		Toggle comment on a range of text moved over by {motion}.
 
 		Note: Every top-level comments will be removed even if its end
 		extends beyond {motion}.
 
-<Plug>(CommentrComment){binding}c
+<CommentrLeader>{binding}c
 	Toggle comment on current line.
 
-<Plug>(CommentrComment){binding}A
+<CommentrLeader>{binding}A
 	Jump with |A| and insert comment, i.e. append comment.
 
-<Plug>(CommentrComment){binding}I
+<CommentrLeader>{binding}I
 	Jump with |I| and insert comment, i.e. prepend comment.
 
-<Plug>(CommentrComment){binding}o
+<CommentrLeader>{binding}o
 	Jump with |o| and insert comment, i.e. insert comment below.
 
-<Plug>(CommentrComment){binding}O
+<CommentrLeader>{binding}O
 	Jump with |O| and insert comment, i.e. insert comment above.
 
-<Plug>(CommentrComment)C{motion}
-	Comment out lines moved over by {motion}.
-	Note: It is only defined for default comment group.
-
-<Plug>(CommentrComment)x
-	Toggle so called "sexy" comments.
-
-<Plug>(CommentrUncomment){motion}
+<CommentrUncommentMap>{motion}
 	Uncomment lines moved over {motion}
 
-<Plug>(CommentrUncomment)u
+<CommentrUncommentMap>u
 	Uncomment current line.
 
 |Visual-mode| mappings:
 
-<Plug>(CommentrComment)<group>c
+<CommentrLeader><group>c
 	Comment out regin.
 
-<Plug>(CommentrUncomment)
+<CommentrUncommentMap>
 	Uncomment region.
 
 ------------------------------------------------------------------------------
