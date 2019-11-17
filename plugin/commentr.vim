@@ -46,7 +46,7 @@ if !empty(g:commentr_bindings)
     exec 'nnoremap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
     exec 'nnoremap <unique> <silent> <expr> <Plug>(CommentrComment)' . s:binding . 'c commentr#ToggleCommentMotion("' . s:flags . '") . "V0"'
 
-    if s:flags !~# '\v([A-Z]|\=)'
+    if s:flags !~# '\v[A-Z=]'
       exec 'nnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'A A' . s:ccmd
       exec 'nnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'I I' . s:ccmd
       exec 'nnoremap <unique> <silent> <Plug>(CommentrComment)' . s:binding . 'o o' . s:ccmd
