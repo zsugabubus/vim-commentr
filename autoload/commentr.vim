@@ -24,7 +24,8 @@ augroup commentr
   au!
   au FileType cpp
     \ let b:commentr_ft_noguess = ['c']
-
+  au FileType rst
+    \ let b:commentr_commentstring = '..\n  %s \$'
   au FileType dosbatch
     \ let b:commentr_commentstring = 'REM %s,::%s'
   au FileType html,markdown
@@ -366,33 +367,27 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
       continue
     endif
 
-    let [lcom; header] = split(lcom, '\\n', 1)
-    let footerrcom = split(rcom, '\\n', 1)
-    let [rcom, footer] = [remove(footerrcom, -1), footerrcom]
-
     let comment = {}
-
     let comment.group = group
 
     let lcom = substitute(lcom, '\\,', ',', 'g')
     let [lsel, lstr] = matchlist(lcom, '\v\C^%(\\([0^_]))?(.*)$')[1:2]
     let comment.lstr = lstr
-    let comment.header = header
     let comment.lsel = !empty(lsel) ? lsel : '*'
     let comment.lpat =
       \ '\m\C' .
       \ {
-      \   '0': '^',
-      \   '^': '^',
-      \   '_': '^\s*',
+      \   '0': '\_^',
+      \   '^': '\_^',
+      \   '_': '\_^\s*',
       \   '*': ''
       \ }[comment.lsel]
       \ . '\V' .
       \ substitute(
       \   substitute(
-      \     escape(comment.lstr, '\'),
+      \     comment.lstr,
       \   '\m^\s', '\\(\\s\\|\\^\\)', ''),
-      \ '\m\s$', '\\(\\s\\|\\$\\)', '')
+      \ '\m\s\_$', '\\(\\s\\|\\$\\)', '')
 
     let len_margin = (comment.lstr =~# '\m\C^\s')
     let len_padding = (comment.lstr =~# '\m\C\s$')
@@ -408,19 +403,18 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
     let rcom = substitute(rcom, '\\,', ',', 'g')
     let [rstr, rsel] = matchlist(rcom, '\v\C^(.{-})%(\\([$_]))?$')[1:2]
     let comment.rstr = rstr
-    let comment.footer = footer
     let comment.rsel = !empty(rsel) ? rsel : (empty(rstr) ? '$' : '*')
     let comment.rpat =
       \ '\V\C' .
       \ substitute(
       \   substitute(
-      \     escape(comment.rstr, '\'),
+      \     comment.rstr,
       \   '\m^\s\+', '\\(\\s\\|\\^\\)', ''),
-      \'\m\s\+$', '\_s', '')
+      \'\m\s\+$', '\\_s', '')
       \ . '\m' .
       \ {
-      \   '$': '$',
-      \   '_': '\s*$',
+      \   '$': '\_$',
+      \   '_': '\s*\_$',
       \   '*': ''
       \ }[comment.rsel]
 
@@ -755,25 +749,8 @@ function! g:commentr#DoComment(...) abort range
   let will_com_after = comment.rstr !=# '' && range_type ==# 'block' && end_col ==# 2147483647 && ralign !~# '\m\C^[$<]$'
   let max_width = 0
 
-  if range_type ==# 'char' && start_col ==# 1 && end_col == 2147483647
-    if !empty(comment.header)
-      " Note: Whitespaces are single byte.
-      let comment.lstr = strpart(comment.lstr, 0, len(comment.lstr) - comment.len_lpadding)
-      let comment.len_lpadding = 0
-      call append(start_lnum - 1, map(comment.header,
-        \ {_, line-> min_lwhite . line}))
-      let end_lnum += len(comment.header)
-    endif
-    if !empty(comment.footer)
-      " let comment.rstr = strpart(comment.rstr, comment.len_rpadding)
-      " let comment.len_rpadding = 0
-      call append(end_lnum, map(comment.footer,
-        \ {_, line-> min_lwhite . line}))
-      let end_lnum += len(comment.footer)
-    endif
-  endif
-
   if range_type ==# 'block'
+    " TODO: Handle new lines.
     exec 'normal! A' . comment.rstr
     exec 'normal! gvI' . comment.lstr
     undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
@@ -810,6 +787,7 @@ function! g:commentr#DoComment(...) abort range
     if lnum ==# start_lnum || empty(comment.rstr) || !empty(comment.lmstr)
       " FIXME: Use proper lmargin
       let lstr = lnum ==# start_lnum || empty(comment.lmstr) ? comment.lstr : comment.lmstr
+      let lstr = substitute(lstr, '\\n', '\n', 'g')
 
       if start_col ==# 1
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
@@ -876,7 +854,6 @@ endfunction " 4}}}
 
 function! g:commentr#OpUncomment(mode) abort
   " {{{4
-
   let g:commentr_mode_override = a:mode
   call g:commentr#DoUncomment(g:commentr_op_group)
 endfunction " 4}}}
@@ -939,7 +916,6 @@ function! g:commentr#DoUncomment(...) abort range
         for Comparator in [
         \ !exists('nextcomment'),
         \ {-> s:poscmp(nextcomment.nextstart, comment.nextstart)},
-        \ {-> len(comment.header) - len(nextcomment.header)},
         \ {-> len(trim(comment.lstr)) - len(trim(nextcomment.lstr))},
         \ {-> len(trim(comment.rstr)) - len(trim(nextcomment.rstr))}
         \ ]
@@ -994,24 +970,6 @@ function! g:commentr#DoUncomment(...) abort range
     exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
 
     undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
-
-    let Trimmer = {_, line-> trim(line)}
-    let [header_start, header_end] = [cstart_lnum, cstart_lnum + len(nextcomment.header) - 1]
-    let [footer_start, footer_end] = [cend_lnum - len(nextcomment.footer) + 1, cend_lnum]
-    if    map(getline(header_start, header_end), Trimmer)
-     \ == map(nextcomment.header, Trimmer)
-     \ && map(getline(footer_start, footer_end), Trimmer)
-     \ == map(nextcomment.footer, Trimmer)
-      if !empty(nextcomment.footer)
-        exe footer_start . ',' . footer_end . 'delete _'
-      endif
-      if !empty(nextcomment.header)
-        exe header_start . ',' . header_end . 'delete _'
-      endif
-
-      let cend_lnum -= len(nextcomment.header) + len(nextcomment.footer)
-      let end_lnum -= len(nextcomment.header) + len(nextcomment.footer)
-    endif
 
     if cend_col < 2147483647
       let start_lnum = cend_lnum
