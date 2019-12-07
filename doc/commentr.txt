@@ -101,7 +101,7 @@ Example: >
 		Note: Every top-level comments will be removed even if its end
 		extends beyond {motion}.
 
-<CommentrLeader>{binding}c
+<CommentrLeader>{binding}{last char of binding}
 	Toggle comment on current line.
 
 <CommentrLeader>{binding}A
@@ -119,7 +119,7 @@ Example: >
 <CommentrUncommentMap>{motion}
 	Uncomment lines moved over {motion}
 
-<CommentrUncommentMap>u
+<CommentrUncommentMap>{last char of CommentrUncommentMap}
 	Uncomment current line.
 
 |Visual-mode| mappings:
