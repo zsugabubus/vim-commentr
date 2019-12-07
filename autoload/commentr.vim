@@ -247,6 +247,9 @@ function! s:getComments(flags) abort
           " Fallback to Vim defaults.
           if empty(commentstring) && did_ftplugin
             let commentstring = getbufvar(dummybuf, '&commentstring')
+            " Don't treat spaces around "%s" mandantory, because in
+            " 'commentstring' it's usually just padding.
+            let commentstring = substitute(commentstring, '\m\A\zs \?%s\%( \ze\A\)\?', '%s', '')
           endif
           let comments = getbufvar(dummybuf, '&comments')
 
