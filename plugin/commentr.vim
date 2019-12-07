@@ -44,7 +44,7 @@ if !empty(g:commentr_bindings)
     let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'
 
     exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_leader . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
-    exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_leader . s:binding . 'c commentr#ToggleCommentMotion("' . s:flags . '") . "V0"'
+    exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_leader . s:binding . s:binding[-1:] .' commentr#ToggleCommentMotion("' . s:flags . '") . "V0"'
 
     if s:flags !~# '\v[A-Z=]'
       exec 'nnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'A A' . s:ccmd
@@ -52,11 +52,11 @@ if !empty(g:commentr_bindings)
       exec 'nnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'o o' . s:ccmd
       exec 'nnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'O O' . s:ccmd
     endif
-    exec 'vnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'c ' . s:ccmd
+    exec 'vnoremap <unique> <silent> ' . g:commentr_leader . s:binding . s:binding[-1:] . s:ccmd
   endfor
 
   exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_uncomment_map . '  commentr#UncommentMotion("*=")'
-  exec 'nnoremap <unique> <silent> '        . g:commentr_uncomment_map . 'u <Cmd>Uncomment<CR>'
+  exec 'nnoremap <unique> <silent> '        . g:commentr_uncomment_map . g:commentr_uncomment_map[-1:] . ' <Cmd>Uncomment<CR>'
   exec 'vnoremap <unique> <silent> '        . g:commentr_uncomment_map . '  <Cmd>Uncomment<CR>'
 endif
 
