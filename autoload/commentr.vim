@@ -736,17 +736,13 @@ function! g:commentr#DoComment(...) abort range
   call s:setVimOptions()
 
   " Rank comments.
-  " TODO: Use some advanced A.I. here.
-  if cfg.force_linewise
-    let comment = comments[0]
-    for comm in comments
-      if comm.rstr ==# ''
-        let comment = comm
-      endif
-    endfor
+  if cfg.force_linewise || end_lnum ==# start_lnum
+    let Ranker = {c-> c.rstr ==# ''}
   else
-    let comment = comments[0]
+    let Ranker = {c-> c.rstr !=# ''}
   endif
+  let comments = reverse(sort(comments, Ranker))
+  let comment = comments[0]
 
   let [lalign, ralign] = [cfg.lalign, cfg.ralign]
   let will_com_after = comment.rstr !=# '' && range_type ==# 'block' && end_col ==# 2147483647 && ralign !~# '\m\C^[$<]$'
