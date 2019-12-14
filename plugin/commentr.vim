@@ -36,7 +36,7 @@ if !empty(g:commentr_bindings)
     let g:commentr_leader = '<Leader>'
   endif
   if !has_key(g:, 'commentr_uncomment_map')
-    let g:commentr_uncomment_map = '<Leader>cu'
+    let g:commentr_uncomment_map = g:commentr_leader . 'u'
   endif
 
   for [s:binding, s:flags] in items(g:commentr_bindings)

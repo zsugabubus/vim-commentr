@@ -91,7 +91,7 @@ Example: >
 
 						*commentr_uncomment_map*
 <CommentrUncommentMap> is replaced with the string value of
-"g:commentr_uncomment_map" variable. If unset, "<Leader>cu" is used.
+"g:commentr_uncomment_map" variable. If unset, "<CommentrLeader>u" is used.
 
 |Normal-mode| mappings:
 
