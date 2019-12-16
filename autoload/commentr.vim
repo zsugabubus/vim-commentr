@@ -788,7 +788,7 @@ function! g:commentr#DoComment(...) abort range
       let lstr = lnum ==# start_lnum || empty(comment.lmstr) ? comment.lstr : comment.lmstr
       let lstr = substitute(lstr, '\\n', '\n', 'g')
 
-      if start_col ==# 1
+      if start_col ==# 1 || lnum ># start_lnum
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
           exec "normal! \<Esc>0i" . lstr[comment.len_lmargin:]
         elseif lalign ==# '_'
