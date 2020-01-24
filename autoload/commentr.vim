@@ -840,6 +840,9 @@ function! g:commentr#DoComment(...) abort range
   if !empty(comment.rstr) || mode !=# 'i'
     undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
   endif
+
+  undojoin | exec start_lnum . ',' . end_lnum . 'retab!'
+
   call cursor(curpos)
 endfunction " 4}}}
 
