@@ -55,9 +55,11 @@ if !empty(g:commentr_bindings)
     exec 'xnoremap <unique> <silent> ' . g:commentr_leader . s:binding . s:binding[-1:] . ' ' . s:ccmd
   endfor
 
-  exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_uncomment_map . '  commentr#UncommentMotion("*=")'
-  exec 'nnoremap <unique> <silent> '        . g:commentr_uncomment_map . g:commentr_uncomment_map[-1:] . ' <Cmd>Uncomment<CR>'
-  exec 'xnoremap <unique> <silent> '        . g:commentr_uncomment_map . '  <Cmd>Uncomment<CR>'
+  if !empty(g:commentr_uncomment_map)
+    exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_uncomment_map . '  commentr#UncommentMotion("*=")'
+    exec 'nnoremap <unique> <silent> '        . g:commentr_uncomment_map . g:commentr_uncomment_map[-1:] . ' <Cmd>Uncomment<CR>'
+    exec 'xnoremap <unique> <silent> '        . g:commentr_uncomment_map . '  <Cmd>Uncomment<CR>'
+  endif
 endif
 
 " SECTION: Cleanup-Boilerplate {{{1
