@@ -4,14 +4,13 @@ The commenter plugin for Vim.
 
 ## Features
 
-- Block or inline? Commentr automagically picks the best one for you.
-- Commentr can comment every single $h!t character for you. No restrictions. Comment with the full power of motions.
-- Commentr is also file-type aware and properly escapes comments, so you never again have to fear of editing HTML or Vue files.
-- Insert documentation, module or any other kind of comments into Rust or anywhere you want. Add your bindings for your favourite groups and configuration.
-- Everything configurable with a single line.
-- Does not use `setline()`.
+- Motion-based un/commenting.
+- Painless and extensible mappings–requires only one mapping.
+- Flexible, single line configuration–uses and extends `commentstring`.
+- Unlimited number of comment styles/alternatives–commentr picks the best for you.
+- Nested file-type support.
+- No `setline()`s, just editor commands. Works nicely with Vim 8 text properties feature.
 - Lightweight.
-- Impossible? Install and try out.
 
 ## Documentation
 
