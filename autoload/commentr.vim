@@ -288,7 +288,7 @@ function! s:getComments(flags) abort
 endfunction " 3}}}
 
 " Purpose: Return range for (un)commenting.
-function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort
+function! s:computeRange(mode, virtcol_dot, force_linewise, firstline_, lastline_) abort
   " {{{3
   if a:mode ==# 'v' || a:mode ==# 's' || a:mode ==# "\<C-V>" || a:mode ==# "\<C-S>"
     let [start_lnum, start_col] = [line('v'), virtcol('v')]
@@ -317,7 +317,7 @@ function! s:computeRange(mode, force_linewise, firstline_, lastline_) abort
     let range_type = 'char'
 
   elseif a:mode ==# 'i'
-    let [start_lnum, start_col] = [line('.'), virtcol('.')]
+    let [start_lnum, start_col] = [line('.'), a:virtcol_dot]
     let [end_lnum, end_col]     = [start_lnum, start_col ># 1 ? start_col - 1 : 1]
     let range_type = 'char'
   else
@@ -607,12 +607,14 @@ endfunction " 4}}}
 function! g:commentr#DoComment(...) abort range
   " {{{4
   let flags = get(a:, 1, '')
+  " Buffer creation can mess up virtcol.
+  let virtcol_dot = virtcol('.')
   let [cfg, comments] = s:getComments(flags)
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
-  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, cfg.force_linewise, a:firstline, a:lastline)
+  let [start_lnum, start_col, end_lnum, end_col, range_type] = s:computeRange(mode, virtcol_dot, cfg.force_linewise, a:firstline, a:lastline)
 
   let min_width_lwhite = 2147483647
   let min_lwhite = ''
@@ -799,7 +801,9 @@ function! g:commentr#DoComment(...) abort range
 
       else
         exec 'normal! _'
-        let lstr = virtcol('.') < start_col && virtcol('.') + 1 != virtcol('$') ? lstr : lstr[comment.len_lmargin:]
+        " Omit leading whitespace in left comment if we put it after or
+        " into trailing whitespace of a line.
+        let lstr = virtcol('.') < start_col && virtcol('$') <=# start_col ? lstr[comment.len_lmargin:] : lstr
         exec "normal! \<Esc>" . start_col . '|i' . lstr . "\<C-G>u"
       endif
       if lnum ==# start_lnum
@@ -865,13 +869,14 @@ function! g:commentr#DoUncomment(...) abort range
   " {{{4
   let winview = winsaveview()
   let flags = get(a:, 1, '')
+  let virtcol_dot = virtcol('.')
   let [cfg, comments] = s:getComments(flags)
 
   let mode = get(g:, 'commentr_mode_override', mode(1))
   unlet! g:commentr_mode_override
 
   let [start_lnum, start_col, end_lnum, end_col, range_type] =
-    \ s:computeRange(mode, cfg.force_linewise, a:firstline, a:lastline)
+    \ s:computeRange(mode, virtcol_dot, cfg.force_linewise, a:firstline, a:lastline)
 
   call s:setVimOptions()
 
@@ -941,7 +946,7 @@ function! g:commentr#DoUncomment(...) abort range
     let [cend_lnum, cend_col] = nextcomment.nextend
 
     if cend_col !=# 2147483647
-      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{,' . nextcomment.len_rmargin . '}\)//'
+      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{' . nextcomment.len_rmargin . '}\)//'
     endif
 
     let has_lmstr = nextcomment.lmstr !=# ''
@@ -969,9 +974,10 @@ function! g:commentr#DoUncomment(...) abort range
       endfor
     endif
 
-    exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{,' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
+    exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
 
-    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
+    " Empty lines that only contains whitespace.
+    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m^\s\+$//e'
 
     if cend_col < 2147483647
       let start_lnum = cend_lnum
