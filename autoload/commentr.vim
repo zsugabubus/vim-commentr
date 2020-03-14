@@ -975,7 +975,7 @@ function! g:commentr#DoUncomment(...) abort range
     exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
 
     " Empty lines that only contains whitespace.
-    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m^\s\+$//e'
+    undojoin | exec 'silent keeppattern ' . cstart_lnum . ',' . cend_lnum . 's/\m^\s\+$//e'
 
     " Re-merge spaces into tab.
     undojoin | exec cstart_lnum . ',' . cend_lnum . 'retab!'
