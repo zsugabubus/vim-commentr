@@ -845,8 +845,6 @@ function! g:commentr#DoComment(...) abort range
     undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
   endif
 
-  undojoin | exec start_lnum . ',' . end_lnum . 'retab!'
-
   call cursor(curpos)
 endfunction " 4}}}
 
@@ -978,6 +976,9 @@ function! g:commentr#DoUncomment(...) abort range
 
     " Empty lines that only contains whitespace.
     undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m^\s\+$//e'
+
+    " Re-merge spaces into tab.
+    undojoin | exec cstart_lnum . ',' . cend_lnum . 'retab!'
 
     if cend_col < 2147483647
       let start_lnum = cend_lnum
