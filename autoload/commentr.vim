@@ -539,7 +539,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
 endfunction " 3}}}
 
 " Purpose: Set Vim options that hopefully won't break things.
-function! s:setVimOptions() abort
+function! s:saveVimOptions() abort
   let s:old_virtedit=&virtualedit
   let s:old_paste=&paste
   set virtualedit=all
@@ -735,7 +735,7 @@ function! g:commentr#DoComment(...) abort range
     throw "commentr: cannot comment region"
   endif
 
-  call s:setVimOptions()
+  call s:saveVimOptions()
 
   " Rank comments.
   if cfg.force_linewise || end_lnum ==# start_lnum
@@ -876,7 +876,7 @@ function! g:commentr#DoUncomment(...) abort range
   let [start_lnum, start_col, end_lnum, end_col, range_type] =
     \ s:computeRange(mode, virtcol_dot, cfg.force_linewise, a:firstline, a:lastline)
 
-  call s:setVimOptions()
+  call s:saveVimOptions()
 
   while 1
     for i in range(len(comments) - 1, 0, -1)
@@ -977,8 +977,10 @@ function! g:commentr#DoUncomment(...) abort range
     " Empty lines that only contains whitespace.
     undojoin | exec 'silent keeppattern ' . cstart_lnum . ',' . cend_lnum . 's/\m^\s\+$//e'
 
+    call s:restoreVimOptions()
     " Re-merge spaces into tab.
     undojoin | exec cstart_lnum . ',' . cend_lnum . 'retab!'
+    call s:saveVimOptions()
 
     if cend_col < 2147483647
       let start_lnum = cend_lnum
