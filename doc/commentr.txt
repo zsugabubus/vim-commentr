@@ -1,4 +1,4 @@
-*commentr.txt*	For Vim version 7.3
+*commentr.txt*	Comment and uncomment ranges.
 
                                       Type |gO| to see the table of contents.
 
@@ -10,9 +10,9 @@ A powerful commenter plugin.
 ==============================================================================
 COMMANDS						*commentr-commands*
 
-:[range]Comment [flags]						*:Comment*
+:[range]Comment [{flags}]					*:Comment*
 		Comment a range of text. Range is automagically calculated
-		from current mode and [flags]. See |commentr-flags|.
+		from current mode and {flags}. See |commentr-flags|.
 
 			|mode()|
 			n	The given [range].
@@ -28,10 +28,10 @@ COMMANDS						*commentr-commands*
 			map {binding} <Cmd>Comment C<CR>
 			map {binding} <Cmd>Uncomment<CR>
 <
-:[range]Uncomment [flags]				*:Uncomment*
+:[range]Uncomment [{flags}]				*:Uncomment*
 		Like |:Comment|, but uncomment a range of text.
 
-:[range]ToggleComment [flags]				*:ToggleComment*
+:[range]ToggleComment [{flags}]				*:ToggleComment*
 		If text under cursor is uncommented same as |:Comment|
 		otherwise |:Uncomment|. Determining whether text is commented
 		or not is based on syntax item under and around cursor.
@@ -62,7 +62,7 @@ CONFIGURATION					*commentr-configuration*
 ------------------------------------------------------------------------------
 							*commentr_bindings*
 Map keybindings to |commentr-flags|. The |Dictionary| shall contain items
-in "binding": "flags" format.
+in {binding}: {flags} format.
 
 	{binding}	Any valid {lhs} for |:map|.
 	{flags}		See |commentr-flags|

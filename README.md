@@ -10,7 +10,7 @@ The commenter plugin for Vim.
 - Unlimited number of comment styles/alternatives–commentr picks the best for you.
 - Nested file-type support.
 - Correct space/tabulator support.
-- No `setline()`s, just editor commands. Works nicely with Vim 8 text properties feature.
+- No `setline()`s, just editorial commands.
 - Lightweight.
 
 ## Documentation
