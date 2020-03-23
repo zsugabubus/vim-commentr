@@ -36,30 +36,32 @@ if !empty(g:commentr_bindings)
     let g:commentr_leader = '<Leader>'
   endif
   if !has_key(g:, 'commentr_uncomment_map')
-    let g:commentr_uncomment_map = g:commentr_leader . 'u'
+    let g:commentr_uncomment_map = g:commentr_leader.'u'
   endif
 
+  let s:cmdprefix = has('nvim') ? '<Cmd>' : ':'
   for [s:binding, s:flags] in items(g:commentr_bindings)
     let s:flags = escape(s:flags, '\"')
-    let s:ccmd = '<Cmd>ToggleComment ' . s:flags . '<CR>'
+    let s:ccmd = s:cmdprefix.'ToggleComment '.s:flags.'<CR>'
 
-    exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_leader . s:binding . ' commentr#ToggleCommentMotion("' . s:flags . '")'
-    exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_leader . s:binding . s:binding[-1:] . ' commentr#ToggleCommentMotion("' . s:flags . '") . "V0"'
+    exec 'nnoremap <unique><silent><expr>' g:commentr_leader.s:binding 'commentr#ToggleCommentMotion("'.s:flags.'")'
+    exec 'nnoremap <unique><silent><expr>' g:commentr_leader.s:binding.s:binding[-1:] 'commentr#ToggleCommentMotion("'.s:flags.'")."V0"'
 
     if s:flags !~# '\v[A-Z=]'
-      exec 'nnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'A A' . s:ccmd
-      exec 'nnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'I I' . s:ccmd
-      exec 'nnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'o o' . s:ccmd
-      exec 'nnoremap <unique> <silent> ' . g:commentr_leader . s:binding . 'O O' . s:ccmd
+      exec 'nnoremap <unique><silent>' g:commentr_leader.s:binding.'A' 'A'.s:ccmd
+      exec 'nnoremap <unique><silent>' g:commentr_leader.s:binding.'I' 'I'.s:ccmd
+      exec 'nnoremap <unique><silent>' g:commentr_leader.s:binding.'o' 'o'.s:ccmd
+      exec 'nnoremap <unique><silent>' g:commentr_leader.s:binding.'O' 'O'.s:ccmd
     endif
-    exec 'xnoremap <unique> <silent> ' . g:commentr_leader . s:binding . s:binding[-1:] . ' ' . s:ccmd
+    exec 'xnoremap <unique><silent>' g:commentr_leader.s:binding.s:binding[-1:] s:ccmd
   endfor
 
   if !empty(g:commentr_uncomment_map)
-    exec 'nnoremap <unique> <silent> <expr> ' . g:commentr_uncomment_map . '  commentr#UncommentMotion("*=")'
-    exec 'nnoremap <unique> <silent> '        . g:commentr_uncomment_map . g:commentr_uncomment_map[-1:] . ' <Cmd>Uncomment<CR>'
-    exec 'xnoremap <unique> <silent> '        . g:commentr_uncomment_map . '  <Cmd>Uncomment<CR>'
+    exec 'nnoremap <unique><silent><expr>' g:commentr_uncomment_map 'commentr#UncommentMotion("*=")'
+    exec 'nnoremap <unique><silent>'       g:commentr_uncomment_map.g:commentr_uncomment_map[-1:] s:cmdprefix.'Uncomment<CR>'
+    exec 'xnoremap <unique><silent>'       g:commentr_uncomment_map s:cmdprefix.'Uncomment<CR>'
   endif
+  unlet s:cmdprefix s:binding s:flags s:ccmd
 endif
 
 " SECTION: Cleanup-Boilerplate {{{1
