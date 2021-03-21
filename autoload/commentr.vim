@@ -198,8 +198,8 @@ function! s:getComments(flags) abort
             call setbufvar(dummybuf, '&syntax', 'ON')
             call setbufvar(dummybuf, '&buflisted', '1')
 
-            exec dummybuf . 'bufdo redir => b:commentr_synlist | silent syn list | redir END'
-            exec 'buffer ' . currbuf
+            noautocmd exec dummybuf . 'bufdo redir => b:commentr_synlist | silent syn list | redir END'
+            noautocmd exec 'buffer ' . currbuf
 
             call setbufvar(dummybuf, '&buflisted', '0')
             let groupinfo = split(getbufvar(dummybuf, 'commentr_synlist'), '\n')[1:]
@@ -277,7 +277,7 @@ function! s:getComments(flags) abort
       catch
         throw 'commentr: ' . v:exception
       finally
-        exec dummybuf . 'bwipeout'
+        noautocmd exec dummybuf . 'bwipeout'
       endtry
 
     endfor
@@ -752,9 +752,9 @@ function! g:commentr#DoComment(...) abort range
 
   if range_type ==# 'block'
     " TODO: Handle new lines.
-    exec 'normal! A' . comment.rstr
-    exec 'normal! gvI' . comment.lstr
-    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
+    noautocmd exec 'normal! A' . comment.rstr
+    noautocmd exec 'normal! gvI' . comment.lstr
+    undojoin | noautocmd exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
     " No escape in block mode, because:
     " a) Handling visual mode to eof is more important,
     " b) What should we really escape?
@@ -762,7 +762,7 @@ function! g:commentr#DoComment(...) abort range
   endif
 
   for [pat, sub] in comment.escss
-    exec 'silent keeppattern %s/' . s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col) .
+    noautocmd exec 'silent keeppattern %s/' . s:computeRegexpRange(start_lnum, start_col, end_lnum, end_col) .
       \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
   endfor
 
@@ -774,13 +774,13 @@ function! g:commentr#DoComment(...) abort range
 
       if end_col ==# 2147483647
         if ralign ==# '$'
-          exec "normal! \<Esc>A" . rstr
+          noautocmd exec "normal! \<Esc>A" . rstr
         elseif ralign ==# '<'
-          exec "normal! \<Esc>g_" . rstr
+          noautocmd exec "normal! \<Esc>g_" . rstr
         endif
 
       else
-        exec "normal! \<Esc>" . end_col . (virtcol('$') > end_col ? '|a' : '|i') . rstr
+        noautocmd exec "normal! \<Esc>" . end_col . (virtcol('$') > end_col ? '|a' : '|i') . rstr
 
       endif
     endif
@@ -792,19 +792,19 @@ function! g:commentr#DoComment(...) abort range
 
       if start_col ==# 1 || lnum ># start_lnum
         if lalign ==# '0' || (lalign ==# '|' && min_width_lwhite ==# 0) || comment.lsel ==# '0'
-          exec "normal! \<Esc>0i" . lstr[comment.len_lmargin:]
+          noautocmd exec "normal! \<Esc>0i" . lstr[comment.len_lmargin:]
         elseif lalign ==# '_'
-          exec "normal! \<Esc>I" . lstr[comment.len_lmargin:]
+          noautocmd exec "normal! \<Esc>I" . lstr[comment.len_lmargin:]
         elseif lalign ==# '|'
-          exec "normal! \<Esc>" . min_width_lwhite . '|a' . lstr[comment.len_lmargin:]
+          noautocmd exec "normal! \<Esc>" . min_width_lwhite . '|a' . lstr[comment.len_lmargin:]
         endif
 
       else
-        exec 'normal! _'
+        noautocmd exec 'normal! _'
         " Omit leading whitespace in left comment if we put it after or
         " into trailing whitespace of a line.
         let lstr = virtcol('.') < start_col && virtcol('$') <=# start_col ? lstr[comment.len_lmargin:] : lstr
-        exec "normal! \<Esc>" . start_col . '|i' . lstr . "\<C-G>u"
+        noautocmd exec "normal! \<Esc>" . start_col . '|i' . lstr . "\<C-G>u"
       endif
       if lnum ==# start_lnum
         let curpos = [lnum, col("']")]
@@ -835,14 +835,14 @@ function! g:commentr#DoComment(...) abort range
 
     for lnum in range(start_lnum, end_lnum)
       call cursor(lnum, 1)
-      exec "normal! " . (virtcol('$') < needed_width : needed_width . '|a' : 'A') . rstr_rtrim
+      noautocmd exec "normal! " . (virtcol('$') < needed_width : needed_width . '|a' : 'A') . rstr_rtrim
     endfor
   endif
 
   call s:restoreVimOptions()
 
   if !empty(comment.rstr) || mode !=# 'i'
-    undojoin | exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
+    undojoin | noautocmd exec 'silent keeppattern ' . start_lnum . ',' . end_lnum . 's/\m\s\+$//e'
   endif
 
   call cursor(curpos)
@@ -944,7 +944,7 @@ function! g:commentr#DoUncomment(...) abort range
     let [cend_lnum, cend_col] = nextcomment.nextend
 
     if cend_col !=# 2147483647
-      exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{' . nextcomment.len_rmargin . '}\)//'
+      noautocmd exec 'silent keeppattern ' . cend_lnum . 's/\m\s\{,' . nextcomment.len_rpadding . '}\%' . cend_col . 'c' . escape(nextcomment.rpat, '/') . '\m\(\s*$\|\s\{' . nextcomment.len_rmargin . '}\)//'
     endif
 
     let has_lmstr = nextcomment.lmstr !=# ''
@@ -959,7 +959,7 @@ function! g:commentr#DoUncomment(...) abort range
       endfor
 
       if has_lmstr
-        exec 'silent keeppattern ' . (cstart_lnum + 1) . ',' . (cend_lnum - 1) . 's/' . escape(nextcomment.lmpat, '/') . '//e'
+        noautocmd exec 'silent keeppattern ' . (cstart_lnum + 1) . ',' . (cend_lnum - 1) . 's/' . escape(nextcomment.lmpat, '/') . '//e'
       endif
     endif
 
@@ -967,19 +967,19 @@ function! g:commentr#DoUncomment(...) abort range
       " FIXME: It can unescape not commented text because range is not
       " f*cking changing. */
       for [pat, sub] in nextcomment.unescss
-        exec 'silent keeppattern %s/' . s:computeRegexpRange(cstart_lnum, cstart_col, cend_lnum, cend_col) .
+        noautocmd exec 'silent keeppattern %s/' . s:computeRegexpRange(cstart_lnum, cstart_col, cend_lnum, cend_col) .
           \ escape(pat, '/') . '/' . escape(sub, '/') . '/eg'
       endfor
     endif
 
-    exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . '\s\{' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m\s\{,' . nextcomment.len_lpadding . '}//'
+    noautocmd exec 'silent keeppattern ' . cstart_lnum . 's/\m\(' . (range_type !=# 'block' || start_lnum ==# end_lnum ? '^.\{-}\S.\{-}\zs' : '') . ' \{' . nextcomment.len_lmargin . '}\|\)\%' . cstart_col . 'c' . escape(nextcomment.lpat, '/') . '\m \{,' . nextcomment.len_lpadding . '}//'
 
     " Empty lines that only contains whitespace.
-    undojoin | exec 'silent keeppattern ' . cstart_lnum . ',' . cend_lnum . 's/\m^\s\+$//e'
+    undojoin | noautocmd exec 'silent keeppattern ' . cstart_lnum . ',' . cend_lnum . 's/\m^\s\+$//e'
 
     call s:restoreVimOptions()
     " Re-merge spaces into tab.
-    undojoin | exec cstart_lnum . ',' . cend_lnum . 'retab!'
+    undojoin | noautocmd exec cstart_lnum . ',' . cend_lnum . 'retab!'
     call s:saveVimOptions()
 
     if cend_col < 2147483647
