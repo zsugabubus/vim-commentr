@@ -21,42 +21,42 @@ let s:c_commentstring =
     \      ,\=d/**%s*/'
 
 augroup commentr
-  au!
-  au FileType cpp
+  autocmd!
+  autocmd FileType cpp
     \ let b:commentr_ft_noguess = ['c']
-  au FileType rst
+  autocmd FileType rst
     \ let b:commentr_commentstring = '..\n  %s \$'
-  au FileType dosbatch
+  autocmd FileType dosbatch
     \ let b:commentr_commentstring = 'REM %s,::%s'
-  au FileType html,markdown
+  autocmd FileType html,markdown
     \ let b:commentr_commentstring = s:html_commentstrng
-  au FileType haskell,idris
+  autocmd FileType haskell,idris
     \ let b:commentr_commentstring = '--%s,{-%s-}'
-  au FileType django
+  autocmd FileType django
     \ let b:commentr_commentstring =  s:html_commentstrng . '{#%s#}'
-  au FileType eruby
+  autocmd FileType eruby
     \ let b:commentr_commentstring = '<%#%s%>,' . s:html_commentstrng
-  au FileType gsp
+  autocmd FileType gsp
     \ let b:commentr_commentstring = '<%--%s--%>,' . s:html_commentstrng
-  au FileType jinja
+  autocmd FileType jinja
     \ let b:commentr_commentstring = s:html_commentstrng . ',{#%s#}'
-  au FileType julia
+  autocmd FileType julia
     \ let b:commentr_commentstring = '#%s,#=%s=#'
-  au FileType lhaskell
+  autocmd FileType lhaskell
     \ let b:commentr_commentstring = '>-- %s,>{-%s-}'
-  au FileType lua
+  autocmd FileType lua
     \ let b:commentr_commentstring = '--%s,--[[%s]]'
-  au FileType pug
+  autocmd FileType pug
     \ let b:commentr_commentstring = '//-%s,//%s'
-  au FileType rust
+  autocmd FileType rust
     \ let b:commentr_commentstring = '//%s,/*%s*/,\=d///%s,/**%s*/,\=m//!%s,/*!%s*/'
-  au FileType scala
+  autocmd FileType scala
     \ let b:commentr_commentstring = '//%s,/*%s*/,\=d///%s,/**%s*/'
-  au FileType vim
+  autocmd FileType vim
     \ let b:commentr_commentstring = '"%s,,x:":\":'
-  au FileType c
+  autocmd FileType c
     \ let b:commentr_commentstring = s:c_commentstring
-  au FileType cpp
+  autocmd FileType cpp
     \ let b:commentr_commentstring = '//%s,' . s:c_commentstring
 augroup END
 
