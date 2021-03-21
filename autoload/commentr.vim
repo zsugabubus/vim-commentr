@@ -122,11 +122,11 @@ function! s:searchpos(pattern, stopline) abort
 endfunction " 3}}}
 
 " Purpose: Compare position `one` to `other`.
-function! s:poscmp(one, other) abort
+function! s:comparePos(one, other) abort
   " {{{3
   return (a:one[0] !=# a:other[0]
-        \  ? a:one[0] - a:other[0]
-        \  : a:one[1] - a:other[1])
+  \     ? a:one[0]  -  a:other[0]
+  \     : a:one[1]  -  a:other[1])
 endfunction " 3}}}
 
 " Purpose: Checks if given position is commented.
@@ -392,6 +392,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
       \   '\m^\s', '\\(\\s\\|\\^\\)', ''),
       \ '\m\s\_$', '\\(\\s\\|\\$\\)', '')
 
+    " One or zero.
     let len_margin = (comment.lstr =~# '\m\C^\s')
     let len_padding = (comment.lstr =~# '\m\C\s$')
 
@@ -422,6 +423,7 @@ function! s:parseCommentstring(cfg, commentstring, comments) abort
       \ }[comment.rsel]
 
     if comment.rstr !=# ''
+      " One or zero.
       let len_padding = (comment.rstr =~# '\m\C^\s')
       let len_margin = (comment.rstr =~# '\m\C\s$')
 
@@ -881,8 +883,8 @@ function! g:commentr#DoUncomment(...) abort range
   while 1
     for i in range(len(comments) - 1, 0, -1)
       let comment = comments[i]
-      if !has_key(comment, 'nextstart')
-      \  || s:poscmp(comment.nextstart, [start_lnum, start_col]) <# 0
+      if !has_key(comment, 'nextstart') ||
+      \  s:comparePos(comment.nextstart, [start_lnum, start_col]) <# 0
 
         let comment.nextend = 0
         let comment.nextstart = 0
@@ -920,7 +922,7 @@ function! g:commentr#DoUncomment(...) abort range
       if has_key(comment, 'nextstart')
         for Comparator in [
         \ !exists('nextcomment'),
-        \ {-> s:poscmp(nextcomment.nextstart, comment.nextstart)},
+        \ {-> s:comparePos(nextcomment.nextstart, comment.nextstart)},
         \ {-> len(trim(comment.lstr)) - len(trim(nextcomment.lstr))},
         \ {-> len(trim(comment.rstr)) - len(trim(nextcomment.rstr))}
         \ ]
@@ -1003,4 +1005,4 @@ let &cpo = s:save_cpo
 unlet s:save_cpo
 " 1}}}
 
-" vim: ts=2 sw=2 tw=72 et fdm=marker:
+" vim: tw=72 fdm=marker:
