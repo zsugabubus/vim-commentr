@@ -288,6 +288,8 @@ function! s:getComments(flags) abort
 endfunction " 3}}}
 
 " Purpose: Return range for (un)commenting.
+"
+" Columns are in visual positon.
 function! s:computeRange(mode, virtcol_dot, force_linewise, firstline_, lastline_) abort
   " {{{3
   if a:mode ==# 'v' || a:mode ==# 's' || a:mode ==# "\<C-V>" || a:mode ==# "\<C-S>"
@@ -623,6 +625,13 @@ function! g:commentr#DoComment(...) abort range
   let can_lalign = start_col ># 1
   let can_ralign = end_col <# 2147483647
 
+  function! ComputeRend() closure
+    if width_rend <# 0
+      let [rwhite, start_rwhite, end_rwhite] = matchstrpos(line, '\m\C\s*$')
+      let width_rend = strdisplaywidth(strpart(line, -1, start_rwhite))
+    endif
+  endfunction
+
   let len_comments = len(comments)
   for i in range(len_comments - 1, 0, -1)
 
@@ -634,6 +643,7 @@ function! g:commentr#DoComment(...) abort range
   endfor
 
   for lnum in range(start_lnum, end_lnum)
+    let width_rend = -1
     let line = getline(lnum)
     let len_line = strlen(line)
     if len_line ==# 0
@@ -659,11 +669,11 @@ function! g:commentr#DoComment(...) abort range
       break
     endif
 
-    let com_end = lnum !=# end_lnum   && range_type !=# 'block' ? 2147483647 : end_col
+    let com_end = lnum !=# end_lnum && range_type !=# 'block' ? 2147483647 : end_col
 
     if can_ralign
-      let start_rwhite = matchstrpos(line, '\m\C\s*$')[1]
-      let can_ralign = start_rwhite <=# com_end
+      call ComputeRend()
+      let can_ralign = width_rend <=# com_end
     endif
 
     for i in range(len_comments - 1, 0, -1)
@@ -692,13 +702,7 @@ function! g:commentr#DoComment(...) abort range
       if rs ==# '*'
         let must_include_end = 0
       elseif rs ==# '_'
-        if !exists('width_rend')
-          if !exists('rwhite')
-            let [rwhite, start_rwhite, end_rwhite] = matchstrpos(line, '\m\C\s*$')
-          endif
-
-          let width_rend = strdisplaywidth(strpart(line, -1, start_rwhite)])
-        endif
+        call ComputeRend()
         let must_include_end = width_rend
       elseif rs ==# '$'
         if !exists('width_line')
@@ -712,8 +716,7 @@ function! g:commentr#DoComment(...) abort range
         let len_comments -= 1
       endif
     endfor
-    unlet! width_line width_lwhite width_rend
-
+    unlet! width_line width_lwhite
   endfor
 
   " Start and end positions are fix in insert mode.
