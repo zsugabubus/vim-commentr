@@ -178,7 +178,7 @@ function! s:getComments(flags) abort
 
       let dummybuf = bufnr('CommentRDummyBuffer', 1)
       try
-        call setbufvar(dummybuf, '&buftype', 'scratch')
+        call setbufvar(dummybuf, '&buftype', 'nofile')
         call setbufvar(dummybuf, '&ft', synft)
         let did_ftplugin = !empty(getbufvar(dummybuf, 'did_ftplugin'))
         let current_syntax = getbufvar(dummybuf, 'current_syntax')
